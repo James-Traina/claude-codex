@@ -1,0 +1,22 @@
+[
+  {"query": "delegate this to codex", "should_trigger": true},
+  {"query": "hey can you use codex for this one? i've been burning through tokens today", "should_trigger": true},
+  {"query": "save tokens on this — just pass it to codex", "should_trigger": true},
+  {"query": "this is the third time it got the indentation wrong, try codex instead", "should_trigger": true},
+  {"query": "@codex write a parseISO8601 function that handles timezone offsets", "should_trigger": true},
+  {"query": "use the cheaper model for this", "should_trigger": true},
+  {"query": "ugh claude keeps hallucinating the imports, delegate it", "should_trigger": true},
+  {"query": "send this to codex — i just need boilerplate, not a conversation", "should_trigger": true},
+  {"query": "i'm not sure about the answer i just gave — can you get a second opinion?", "should_trigger": true},
+  {"query": "hey quick sanity check: does that useEffect dependency array look right to you? spin up codex", "should_trigger": true},
+  {"query": "why does the useEffect keep firing on every render even though i wrapped it in useCallback", "should_trigger": false},
+  {"query": "should we use redux or zustand for this project's state management?", "should_trigger": false},
+  {"query": "review this PR for security issues before i merge it", "should_trigger": false},
+  {"query": "add jsdoc comments to the parseDate helper in src/utils/dates.ts", "should_trigger": false},
+  {"query": "what's the best architecture for a multi-tenant SaaS backend?", "should_trigger": false},
+  {"query": "explain how the auth middleware in src/middleware/auth.js actually works", "should_trigger": false},
+  {"query": "my tests are failing with 'cannot read properties of undefined' — help me debug", "should_trigger": false},
+  {"query": "how does the codex integration work in this plugin?", "should_trigger": false},
+  {"query": "write a getUser function that queries postgres by id", "should_trigger": false},
+  {"query": "format my code", "should_trigger": false}
+]
