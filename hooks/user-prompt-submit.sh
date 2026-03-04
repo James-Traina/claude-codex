@@ -57,7 +57,7 @@ fi
 #   2. Transcript byte size — reliable proxy when env var is absent
 
 DELEGATE_THRESHOLD_OVERRIDE=""
-RULES_FILE="${PLUGIN_ROOT}/config/routing-rules.json"
+RULES_FILE="${PLUGIN_ROOT}/settings.json"
 if [[ -f "$RULES_FILE" ]]; then
   # Single jq call reads both fraction and byte thresholds to avoid branching jq.
   _BUDGET=$(jq -r '

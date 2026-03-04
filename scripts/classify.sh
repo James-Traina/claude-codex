@@ -30,10 +30,10 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && p
 DELEGATE_THRESHOLD=25
 CLAUDE_THRESHOLD=-20
 
-if command -v jq &>/dev/null && [[ -f "${PLUGIN_ROOT}/config/routing-rules.json" ]]; then
+if command -v jq &>/dev/null && [[ -f "${PLUGIN_ROOT}/settings.json" ]]; then
   # Single jq pass — read all three thresholds at once.
   _THRESH=$(jq -r '.thresholds | [.delegate_threshold // 25, .claude_threshold // -20, .max_prompt_words_for_delegation // 120] | map(tostring) | join(" ")' \
-    "${PLUGIN_ROOT}/config/routing-rules.json" 2>/dev/null || echo "25 -20 120")
+    "${PLUGIN_ROOT}/settings.json" 2>/dev/null || echo "25 -20 120")
   read -r DELEGATE_THRESHOLD CLAUDE_THRESHOLD MAX_WORDS <<< "$_THRESH"
 else
   MAX_WORDS=120

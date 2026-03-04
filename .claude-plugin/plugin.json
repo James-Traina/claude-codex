@@ -1,0 +1,13 @@
+{
+  "name": "claude-codex",
+  "version": "1.0.0",
+  "description": "Routes mechanical coding tasks — test writing, documentation, formatting, and code generation — to OpenAI Codex instead of Claude, cutting token costs on work that doesn't need deep reasoning.",
+  "author": {
+    "name": "James Traina",
+    "url": "https://github.com/James-Traina"
+  },
+  "homepage": "https://github.com/James-Traina/claude-codex",
+  "repository": "https://github.com/James-Traina/claude-codex",
+  "license": "MIT",
+  "keywords": ["openai", "codex", "token-savings", "routing", "delegation", "cost-reduction"]
+}

@@ -28,7 +28,7 @@ fi
 # ── Resolve plugin root ────────────────────────────────────────────────────────
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-RULES="${PLUGIN_ROOT}/config/routing-rules.json"
+RULES="${PLUGIN_ROOT}/settings.json"
 
 # ── Validate codex CLI ────────────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ fi
 
 # ── Load expert persona ────────────────────────────────────────────────────────
 
-EXPERT_FILE="${PLUGIN_ROOT}/config/experts/${CATEGORY}.md"
+EXPERT_FILE="${PLUGIN_ROOT}/scripts/experts/${CATEGORY}.md"
 if [[ -f "$EXPERT_FILE" ]]; then
   EXPERT_CONTEXT=$(cat "$EXPERT_FILE")
 else
