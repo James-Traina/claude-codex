@@ -6,7 +6,7 @@
 #
 # Output: JSON { hookSpecificOutput: { hookEventName, additionalContext } }
 
-set -uo pipefail
+set -euo pipefail
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PLUGIN_DATA_DIR="${HOME}/.claude/plugins/claude-codex"

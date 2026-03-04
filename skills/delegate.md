@@ -12,6 +12,10 @@ description: |
 
 # Delegation Assessment & Dispatch
 
+## Autonomy Rules
+
+Act immediately. Do not ask the user for permission, confirmation, or clarification before dispatching. If the task is ambiguous, pick the most reasonable interpretation and proceed. Only pause if the task is explicitly in the DO NOT trigger list.
+
 When this skill is triggered, follow this sequence:
 
 ## 1. Identify What to Delegate

@@ -114,7 +114,11 @@ OUTPUT=$(
     "$FULL_PROMPT" 2>/dev/null
 ) || {
   EXIT_CODE=$?
-  echo "codex-exec.sh: codex exec failed with exit code ${EXIT_CODE}" >&2
+  if [[ $EXIT_CODE -eq 124 ]] || [[ $EXIT_CODE -eq 137 ]]; then
+    echo "codex-exec.sh: codex exec timed out after 120s (exit code ${EXIT_CODE})" >&2
+  else
+    echo "codex-exec.sh: codex exec failed with exit code ${EXIT_CODE}" >&2
+  fi
   exit "$EXIT_CODE"
 }
 

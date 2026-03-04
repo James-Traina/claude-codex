@@ -1,8 +1,8 @@
 {
   "name": "claude-codex",
   "version": "1.0.0",
-  "description": "Intelligent task router that automatically delegates mechanical coding tasks to OpenAI Codex, reducing Anthropic token usage by 60-85% on simple tasks.",
-  "author": "claude-codex",
+  "description": "Routes mechanical coding tasks — test writing, documentation, formatting, and code generation — to OpenAI Codex instead of Claude, cutting token costs on work that doesn't need deep reasoning.",
+  "author": "jat406",
   "hooks": [
     {
       "event": "SessionStart",

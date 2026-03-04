@@ -81,7 +81,7 @@ SAVINGS_PCT=$(awk "BEGIN {
 
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)
 
-if [[ "$DECISION" == "DELEGATE" ]]; then
+if [[ "$DECISION" == "DELEGATE" ]] || [[ "$DECISION" == "MANUAL_DELEGATE" ]]; then
   PROMPT_PREVIEW=$(echo "$PROMPT" | head -c 120 | tr '\n' ' ')
 
   if command -v jq &>/dev/null; then
@@ -119,7 +119,7 @@ fi
 if command -v jq &>/dev/null; then
   CURRENT=$(cat "$STATE_FILE")
 
-  if [[ "$DECISION" == "DELEGATE" ]]; then
+  if [[ "$DECISION" == "DELEGATE" ]] || [[ "$DECISION" == "MANUAL_DELEGATE" ]]; then
     # Read and update in one jq pass — avoids two separate jq reads of CURRENT.
     echo "$CURRENT" | jq \
       --arg savings "$SAVINGS" \

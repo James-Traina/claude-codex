@@ -26,7 +26,7 @@ classify.sh scores the prompt with weighted pattern matching
      ┌──┴──────────────────────────┐
      │                             │
   DELEGATE                    CLAUDE / UNSURE
-  (score ≥ 25)                (let through)
+  (score ≥ 20)                (let through)
      │
      ▼
 codex-exec.sh injects expert persona + runs `codex exec`
@@ -64,6 +64,7 @@ The classifier routes tasks into five expert personas. Each persona is a special
 | `doc-writer` | "add jsdoc to", "document this class" | `medium` |
 | `refactor` | "rename X to Y", "extract this function" | `medium` |
 | `format` | "format this", "apply prettier", "fix indentation" | `low` |
+| `analyst` | second opinion, uncertainty verification, general analysis | `high` |
 
 Each expert is configured in `config/experts/<category>.md`. You can edit these files to tune the instructions for your project's conventions.
 
@@ -75,7 +76,7 @@ The classifier (`scripts/classify.sh`) assigns a numeric score to every prompt:
 
 - **Positive score** → lean toward Codex delegation
 - **Negative score** → keep with Claude
-- **Threshold**: `DELEGATE if score ≥ 25 AND a category was matched`
+- **Threshold**: `DELEGATE if score ≥ 20 AND a category was matched`
 
 **DELEGATE signals** (add points):
 - Explicit generation verb + code noun: `+30` (e.g., "write a function", "create a class")
@@ -97,7 +98,7 @@ The classifier (`scripts/classify.sh`) assigns a numeric score to every prompt:
 - Explanation requests: `-20`
 - Multiple file paths: `-20`
 - Contains code blocks: `-15`
-- Long prompt (> 50 words): `-15`
+- Long prompt (> 50 words): `-10`
 
 You can adjust the thresholds in `config/routing-rules.json` (`delegate_threshold`, `claude_threshold`).
 
@@ -216,9 +217,9 @@ This continues the prior Codex session with full context of what was already don
 
 | Key | Default | Description |
 |---|---|---|
-| `thresholds.delegate_threshold` | `25` | Minimum score to trigger delegation |
+| `thresholds.delegate_threshold` | `20` | Minimum score to trigger delegation |
 | `thresholds.claude_threshold` | `-20` | Maximum score before forcing to Claude |
-| `thresholds.max_prompt_words_for_delegation` | `120` | Prompts longer than this are never delegated |
+| `thresholds.max_prompt_words_for_delegation` | `200` | Prompts longer than this are never delegated |
 | `models.fast` | `gpt-5.3-codex-spark` | Fast, cheapest Codex model |
 | `models.default` | `gpt-5.3-codex` | Balanced model |
 | `models.capable` | `gpt-5.2` | Most capable Codex model |
@@ -271,6 +272,7 @@ claude-codex/
 ├── config/
 │   ├── routing-rules.json       # Thresholds and model names (editable); routing patterns live in classify.sh
 │   └── experts/                 # One system prompt per task category (editable)
+│       ├── analyst.md
 │       ├── code-generator.md
 │       ├── test-writer.md
 │       ├── doc-writer.md

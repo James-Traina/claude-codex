@@ -10,7 +10,7 @@
 # Output (stdout): JSON { hookSpecificOutput: { hookEventName, additionalContext } }
 #   OR empty / non-zero exit to silently fall through to Claude.
 
-set -uo pipefail
+set -euo pipefail
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
