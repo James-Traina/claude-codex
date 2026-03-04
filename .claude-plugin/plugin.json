@@ -5,24 +5,15 @@
   "author": {
     "name": "James Traina"
   },
-  "hooks": [
-    {
-      "event": "SessionStart",
-      "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\""
-    },
-    {
-      "event": "UserPromptSubmit",
-      "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.sh\""
-    }
-  ],
-  "agents": [
-    "agents/codex-agent.md"
-  ],
-  "skills": [
-    "skills/delegate.md"
-  ],
-  "commands": [
-    "commands/codex.md",
-    "commands/savings.md"
+  "repository": "https://github.com/James-Traina/claude-codex",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "routing",
+    "token-optimization",
+    "productivity",
+    "openai",
+    "task-delegation",
+    "cost-savings"
   ]
 }
