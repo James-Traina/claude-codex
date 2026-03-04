@@ -259,7 +259,7 @@ if echo "$PROMPT" | grep -q '```'; then
   SCORE=$((SCORE - 15))
 fi
 
-# Long prompt penalty (> 50 words) — reduced from -15 to -8 so that well-specified
+# Long prompt penalty (> 50 words) — reduced from -15 to -10 so that well-specified
 # longer tasks (e.g. "write a complete CRUD API with validation and tests") can still
 # cross the delegate threshold when combined with strong category signals.
 if [[ $WORD_COUNT -gt 50 ]]; then
