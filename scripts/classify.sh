@@ -41,6 +41,12 @@ else
   MAX_WORDS=120
 fi
 
+# Allow the hook to override the delegate threshold dynamically (e.g. budget-aware mode).
+# A lower threshold means more tasks are delegated.
+if [[ -n "${DELEGATE_THRESHOLD_OVERRIDE:-}" ]]; then
+  DELEGATE_THRESHOLD="$DELEGATE_THRESHOLD_OVERRIDE"
+fi
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 # matches_pattern <string> <pattern>
@@ -67,16 +73,18 @@ REASON=""
 # DELEGATE signals  (positive score → lean toward Codex)
 # ────────────────────────────────────────────────────────────────
 
-# Code generation — explicit verb + code noun
+# Code generation — explicit verb + code noun.
+# The optional identifier group ([a-z_][a-z0-9_]*[[:space:]]+)? covers the common
+# "write a getUserById function" form where the name precedes the type noun.
 if matches_pattern "$LOWER" \
-   "(write|create|generate|implement)[[:space:]]+(a[[:space:]]+|an[[:space:]]+|the[[:space:]]+)?(new[[:space:]]+)?(function|method|class|interface|type|enum|struct|dto|component|hook|service|controller|handler|middleware|route|endpoint|schema|migration|model|resolver|repository|adapter|mixin|decorator|validator|serializer|deserializer)"; then
+   "(write|create|generate|implement)[[:space:]]+(a[[:space:]]+|an[[:space:]]+|the[[:space:]]+)?(new[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?(function|method|class|interface|type|enum|struct|dto|component|hook|service|controller|handler|middleware|route|endpoint|schema|migration|model|resolver|repository|adapter|mixin|decorator|validator|serializer|deserializer)"; then
   SCORE=$((SCORE + 30))
   CATEGORY="code-generator"
 fi
 
-# Add / implement with code noun (e.g. "add a getUser function")
+# Add / implement with code noun (e.g. "add a getUser function", "implement a validateEmail helper")
 if matches_pattern "$LOWER" \
-   "(add|implement)[[:space:]]+(a[[:space:]]+|an[[:space:]]+|the[[:space:]]+)?(new[[:space:]]+)?(function|method|class|interface|type|route|endpoint|handler|hook|component)"; then
+   "(add|implement)[[:space:]]+(a[[:space:]]+|an[[:space:]]+|the[[:space:]]+)?(new[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?(function|method|class|interface|type|route|endpoint|handler|hook|component)"; then
   SCORE=$((SCORE + 25))
   CATEGORY="${CATEGORY:-code-generator}"
 fi
@@ -122,7 +130,7 @@ if matches_pattern "$LOWER" "document[[:space:]]+(this|the|all|every)[[:space:]]
 fi
 
 # Format / lint
-if matches_pattern "$LOWER" "(^|[[:space:]])(format|lint|prettify|auto-?fix|fix (formatting|indentation|whitespace|trailing|imports|style)|apply (prettier|eslint|black|gofmt|rustfmt))[[:space:]]"; then
+if matches_pattern "$LOWER" "(^|[[:space:]])(format|lint|prettify|auto-?fix|fix (formatting|indentation|whitespace|trailing|imports|style)|apply (prettier|eslint|black|gofmt|rustfmt))([[:space:]]|$)"; then
   SCORE=$((SCORE + 20))
   CATEGORY="${CATEGORY:-format}"
 fi

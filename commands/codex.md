@@ -33,15 +33,26 @@ Extract from the invocation:
 
 ## Execute the Delegation
 
-Run:
+First, classify the task to select the right expert persona:
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/codex-exec.sh" "code-generator" "<TASK_PROMPT>" "$(pwd)" "<SANDBOX>"
+CLASSIFY_RESULT=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/classify.sh" "<TASK_PROMPT>" 2>/dev/null || echo "DELEGATE:code-generator:30")
+CATEGORY=$(echo "$CLASSIFY_RESULT" | cut -d: -f2)
+# Fall back to code-generator for ambiguous or empty categories
+if [[ -z "$CATEGORY" ]] || [[ "$CATEGORY" == "unknown" ]] || [[ "$CATEGORY" == "classify-error" ]]; then
+  CATEGORY="code-generator"
+fi
 ```
 
-If the user specified a model, set the `CODEX_MODEL_OVERRIDE` environment variable before running:
+Then run with the resolved category:
 ```bash
-CODEX_MODEL_OVERRIDE="<model name from routing-rules.json>" \
-  bash "${CLAUDE_PLUGIN_ROOT}/scripts/codex-exec.sh" "code-generator" "<TASK_PROMPT>" "$(pwd)" "<SANDBOX>"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/codex-exec.sh" "$CATEGORY" "<TASK_PROMPT>" "$(pwd)" "<SANDBOX>"
+```
+
+If the user specified a model, map the key to a model name and set `CODEX_MODEL_OVERRIDE`:
+```bash
+# Model key → model name: fast=gpt-5.3-codex-spark, default=gpt-5.3-codex, capable=gpt-5.2
+CODEX_MODEL_OVERRIDE="<resolved model name>" \
+  bash "${CLAUDE_PLUGIN_ROOT}/scripts/codex-exec.sh" "$CATEGORY" "<TASK_PROMPT>" "$(pwd)" "<SANDBOX>"
 ```
 
 ## Display Results

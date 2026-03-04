@@ -1,86 +1,71 @@
 ---
 name: delegate
 description: |
-  Trigger automatic or manual delegation of the current task to OpenAI Codex.
+  Required protocol for routing any task to OpenAI Codex. Handles @codex, codex:, "delegate to codex", "save tokens", "use the cheaper model", "second opinion", and "sanity check via codex" requests. Do not handle these yourself — always go through this skill for proper expert selection and attribution.
 
-  TRIGGER this skill when:
-  - The user says "delegate this", "use codex", "send this to codex", "let codex handle it"
-  - The user says "save tokens" or "use the cheaper model"
-  - The same task has failed or produced a wrong answer 2+ times
-  - The task is clearly mechanical: pure code generation, test scaffolding, docstring writing,
-    mechanical refactoring, or style formatting, AND you have not yet used the codex-agent
-  - The user prefixes their request with "codex:" or "@codex"
+  INVOKE IMMEDIATELY (before doing anything else) when the user says any variant of: delegate, codex, @codex, save tokens, cheaper model, use codex, send to codex, let codex handle it, second opinion, sanity check.
 
-  DO NOT trigger this skill for:
-  - Tasks already handled by the automatic UserPromptSubmit hook (those are already delegated)
-  - Architecture decisions, security review, complex debugging, advisory questions
-  - Tasks requiring understanding of deeply intertwined multi-file logic
+  Also invoke proactively mid-reasoning whenever you feel uncertain and want an independent agent to verify your conclusion before presenting it to the user.
+
+  DO NOT trigger for: tasks the UserPromptSubmit hook already delegated (arrive pre-tagged in additionalContext), security review, auth design, or tasks requiring this full conversation's context.
 ---
 
 # Delegation Assessment & Dispatch
 
-When this skill is triggered, follow this exact sequence:
+When this skill is triggered, follow this sequence:
 
-## 1. Assess the Current Task
+## 1. Identify What to Delegate
 
-Identify the precise task to delegate. If the task is ambiguous, ask one clarifying question before proceeding.
+State the precise sub-task you want Codex to handle. This should be self-contained — a fresh agent with only this description and access to the codebase should be able to complete it.
 
-Classify it:
-```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/classify.sh" "<task description>"
-```
+If you triggered this because of **uncertainty**, frame the task as: "Independently verify: [your conclusion]. Return either 'Confirmed' with a one-sentence reason, or 'Correction: [what's actually right]'."
 
-## 2. Confirm Delegation is Appropriate
+If you triggered this because of **budget / offloading**, frame the task as you would frame it to any capable engineer.
 
-If the classification returns `CLAUDE:<reason>`, explain why the task should stay with Claude:
+## 2. Select the Right Expert Category
 
-> "This task involves [reason]. Delegating it to Codex would risk lower-quality output because [brief explanation]. I'll handle it directly."
+| Scenario | Category |
+|---|---|
+| Verify reasoning, second opinion, general analysis | `analyst` |
+| Write new code (function, class, component) | `code-generator` |
+| Write tests | `test-writer` |
+| Add documentation or docstrings | `doc-writer` |
+| Rename, extract, inline, restructure | `refactor` |
+| Fix formatting or style | `format` |
 
-If the classification returns `DELEGATE` or `UNSURE`, proceed.
+When in doubt, use `analyst` — its expert persona is tuned to be direct and independent.
 
 ## 3. Dispatch to codex-agent
 
-Use the `codex-agent` to execute the task:
+Invoke the codex-agent with the task description, selected category, and the current working directory.
 
-> Invoke the codex-agent with the task description and the current working directory.
+The codex-agent will select the sandbox level, run `codex exec`, and return formatted output.
 
-The codex-agent will:
-- Select the appropriate expert persona
-- Run `codex exec` with the right sandbox and model
-- Return the output formatted and attributed
-
-## 4. Present Results with Dual Attribution
-
-Always make the delegation transparent:
+## 4. Present Results with Clear Attribution
 
 ```
-**[Delegated to Codex]** — _task was routed to OpenAI to conserve Claude tokens_
+**[Delegated to Codex · <category>]**
 
 <codex output>
 ```
 
-Never present Codex-generated code as your own work.
+If this was a **verification request**: present the result as "Codex confirms: ..." or "Codex disagrees: ..." and act accordingly — do not silently discard a correction.
 
-## 5. Validate the Output (Dual-Gate Truthfulness)
+Never present Codex output as your own work.
 
-After presenting the Codex output, perform a rapid sanity check:
+## 5. Validate (Dual-Gate Truthfulness)
 
-- Does the code compile/parse syntactically? (Check for obvious structural errors)
-- Does it match the user's stated requirements?
-- Does it follow the project's existing patterns? (Check one similar file if needed)
+Before relying on Codex output:
+- For code: check for structural/syntax errors, missing imports, and obvious logic flaws
+- For analysis: check that conclusions follow from the evidence presented
+- For verification: check that the confirmation/correction is internally consistent
 
-If any check fails:
-> "**[Claude note]:** I've reviewed the Codex output and noticed [issue]. Here is a correction: [fix]"
+If something looks wrong:
+> "**[Claude note]:** I've reviewed the Codex output and noticed [issue]. Corrected: [fix]"
 
-Never silently pass incorrect code to the user.
+## Escalation
 
-## 6. Log Completion
-
-After successful delegation, the token-tracker script is called automatically by the hook/agent pipeline. No manual logging step is needed.
-
-## Escalation Path
-
-If Codex produces 2 successive incorrect outputs for the same task:
-1. Stop delegating
-2. Handle the task directly with Claude
-3. Inform the user: "Codex produced inconsistent results for this task. I'm handling it directly."
+If Codex produces 2 successive wrong outputs for the same task:
+1. Stop delegating for this task
+2. Handle it directly
+3. Tell the user: "Codex produced inconsistent results here. I'm handling it directly."

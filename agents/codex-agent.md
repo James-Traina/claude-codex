@@ -1,13 +1,15 @@
 ---
 name: codex-agent
 description: |
-  Delegate a specific coding task to OpenAI Codex for execution.
+  General-purpose subagent that dispatches tasks to OpenAI Codex and returns results.
   Use this agent when:
+  - You want a second, independent opinion on reasoning, code, or analysis (use category: analyst)
   - The user explicitly asks to use Codex or delegate a task
-  - A task has failed 2+ times and a fresh perspective is needed
-  - The task is clearly mechanical: code generation, test writing, documentation, refactoring, formatting
+  - A task has failed 2+ times and a fresh start is needed
+  - The task is self-contained: code generation, test writing, documentation, refactoring, formatting, config drafting, library research, file summarisation
+  - The session is long and you want to offload work to preserve Claude budget
   - The user invokes /codex directly
-  Do NOT use this agent for: architecture decisions, security review, complex debugging, advisory questions, or anything requiring deep contextual reasoning.
+  Do NOT use this agent for: security review, auth design, tasks that require the full conversation history to understand.
 model: claude-sonnet-4-6
 tools:
   - Bash
@@ -33,9 +35,9 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/classify.sh" "<the task description>"
 ```
 
 Read the output:
-- `DELEGATE:<category>:<score>` → proceed to Step 3
-- `CLAUDE:<reason>:<score>` → respond: "This task requires Claude's reasoning capabilities. Reason: <reason>. Handing back to Claude."
-- `UNSURE:...` → use your judgment; if in doubt, attempt delegation
+- `DELEGATE:<category>:<score>` → proceed with the returned category
+- `CLAUDE:<reason>:<score>` → if this is a **verification request** (called from the delegate skill), override and use `analyst` category anyway. Otherwise, respond: "This task requires Claude's reasoning. Reason: <reason>. Handing back."
+- `UNSURE:...` → attempt delegation with `analyst` category as the safe default
 
 ## Step 2 — Select Sandbox
 

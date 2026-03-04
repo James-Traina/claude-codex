@@ -20,7 +20,8 @@
     "test-writer":    "default",
     "doc-writer":     "fast",
     "refactor":       "fast",
-    "format":         "fast"
+    "format":         "fast",
+    "analyst":        "default"
   },
 
   "reasoning_effort": {
@@ -28,7 +29,22 @@
     "test-writer":    "high",
     "doc-writer":     "medium",
     "refactor":       "medium",
-    "format":         "low"
+    "format":         "low",
+    "analyst":        "high"
+  },
+
+  "budget_aware": {
+    "enabled": true,
+    "_comment": "Transcript size (bytes) is used as a proxy for session token usage. As the session grows, the delegate threshold is lowered so more tasks get routed to Codex.",
+    "transcript_size_thresholds": {
+      "medium_bytes": 200000,
+      "high_bytes":   350000
+    },
+    "delegate_thresholds": {
+      "normal":       25,
+      "medium_usage": 12,
+      "high_usage":    4
+    }
   },
 
   "sandbox": {

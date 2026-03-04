@@ -77,56 +77,70 @@ SAVINGS_PCT=$(awk "BEGIN {
   else printf \"0.0\"
 }")
 
-# ── Write JSONL log record ─────────────────────────────────────────────────────
+# ── Write JSONL log record (DELEGATE only — CLAUDE decisions skip the log) ────
 
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)
-PROMPT_PREVIEW=$(echo "$PROMPT" | head -c 120 | tr '\n' ' ')
 
-if command -v jq &>/dev/null; then
-  jq -cn \
-    --arg ts "$TIMESTAMP" \
-    --arg decision "$DECISION" \
-    --arg category "$CATEGORY" \
-    --arg preview "$PROMPT_PREVIEW" \
-    --argjson prompt_tokens "$PROMPT_TOKENS" \
-    --argjson output_tokens "$OUTPUT_TOKENS" \
-    --arg claude_cost "$CLAUDE_COST" \
-    --arg codex_cost "$CODEX_COST" \
-    --arg savings "$SAVINGS" \
-    --arg savings_pct "$SAVINGS_PCT" \
-    '{
-      timestamp:     $ts,
-      decision:      $decision,
-      category:      $category,
-      prompt_preview: $preview,
-      prompt_tokens:  $prompt_tokens,
-      output_tokens:  $output_tokens,
-      claude_cost_usd: ($claude_cost | tonumber),
-      codex_cost_usd:  ($codex_cost  | tonumber),
-      savings_usd:     ($savings     | tonumber),
-      savings_pct:     ($savings_pct | tonumber)
-    }' >> "$SAVINGS_LOG"
-else
-  # jq not available — write minimal CSV-style record
-  echo "${TIMESTAMP},${DECISION},${CATEGORY},${PROMPT_TOKENS},${OUTPUT_TOKENS},${SAVINGS}" >> "${SAVINGS_LOG}.csv"
+if [[ "$DECISION" == "DELEGATE" ]]; then
+  PROMPT_PREVIEW=$(echo "$PROMPT" | head -c 120 | tr '\n' ' ')
+
+  if command -v jq &>/dev/null; then
+    jq -cn \
+      --arg ts "$TIMESTAMP" \
+      --arg decision "$DECISION" \
+      --arg category "$CATEGORY" \
+      --arg preview "$PROMPT_PREVIEW" \
+      --argjson prompt_tokens "$PROMPT_TOKENS" \
+      --argjson output_tokens "$OUTPUT_TOKENS" \
+      --arg claude_cost "$CLAUDE_COST" \
+      --arg codex_cost "$CODEX_COST" \
+      --arg savings "$SAVINGS" \
+      --arg savings_pct "$SAVINGS_PCT" \
+      '{
+        timestamp:     $ts,
+        decision:      $decision,
+        category:      $category,
+        prompt_preview: $preview,
+        prompt_tokens:  $prompt_tokens,
+        output_tokens:  $output_tokens,
+        claude_cost_usd: ($claude_cost | tonumber),
+        codex_cost_usd:  ($codex_cost  | tonumber),
+        savings_usd:     ($savings     | tonumber),
+        savings_pct:     ($savings_pct | tonumber)
+      }' >> "$SAVINGS_LOG"
+  else
+    # jq not available — write minimal CSV-style record
+    echo "${TIMESTAMP},${DECISION},${CATEGORY},${PROMPT_TOKENS},${OUTPUT_TOKENS},${SAVINGS}" >> "${SAVINGS_LOG}.csv"
+  fi
 fi
 
 # ── Update aggregate state.json ───────────────────────────────────────────────
 
 if command -v jq &>/dev/null; then
   CURRENT=$(cat "$STATE_FILE")
-  TOTAL_DELEGATED=$(echo "$CURRENT" | jq -r '.total_delegated // 0')
-  TOTAL_SAVINGS=$(echo "$CURRENT" | jq -r '.estimated_savings_usd // 0')
 
-  NEW_DELEGATED=$(( TOTAL_DELEGATED + 1 ))
-  NEW_SAVINGS=$(awk "BEGIN { printf \"%.6f\", $TOTAL_SAVINGS + $SAVINGS }")
+  if [[ "$DECISION" == "DELEGATE" ]]; then
+    TOTAL_DELEGATED=$(echo "$CURRENT" | jq -r '.total_delegated // 0')
+    TOTAL_SAVINGS=$(echo "$CURRENT" | jq -r '.estimated_savings_usd // 0')
+    NEW_DELEGATED=$(( TOTAL_DELEGATED + 1 ))
+    NEW_SAVINGS=$(awk "BEGIN { printf \"%.6f\", $TOTAL_SAVINGS + $SAVINGS }")
 
-  echo "$CURRENT" | jq \
-    --argjson delegated "$NEW_DELEGATED" \
-    --arg savings "$NEW_SAVINGS" \
-    --arg ts "$TIMESTAMP" \
-    '.total_delegated = $delegated |
-     .estimated_savings_usd = ($savings | tonumber) |
-     .last_delegation = $ts' > "${STATE_FILE}.tmp" \
-    && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+    echo "$CURRENT" | jq \
+      --argjson delegated "$NEW_DELEGATED" \
+      --arg savings "$NEW_SAVINGS" \
+      --arg ts "$TIMESTAMP" \
+      '.total_delegated = $delegated |
+       .estimated_savings_usd = ($savings | tonumber) |
+       .last_delegation = $ts' > "${STATE_FILE}.tmp" \
+      && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+  else
+    # Non-delegated task: increment total_claude for accurate delegation-rate tracking.
+    TOTAL_CLAUDE=$(echo "$CURRENT" | jq -r '.total_claude // 0')
+    NEW_CLAUDE=$(( TOTAL_CLAUDE + 1 ))
+
+    echo "$CURRENT" | jq \
+      --argjson claude "$NEW_CLAUDE" \
+      '.total_claude = $claude' > "${STATE_FILE}.tmp" \
+      && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+  fi
 fi

@@ -258,7 +258,7 @@ No telemetry is sent anywhere. The only external call is `codex exec` → OpenAI
 | No `[via Codex]` responses appearing | Authentication expired | `codex auth` |
 | `jq: command not found` in hook | jq not installed | `brew install jq` |
 | Delegation routing something it shouldn't | Score threshold too low | Raise `delegate_threshold` in `routing-rules.json` |
-| Claude is delegating too little | Patterns not matching your phrasing | Lower `delegate_threshold` or add patterns to `routing-rules.json` |
+| Claude is delegating too little | Score threshold too high | Lower `delegate_threshold` in `routing-rules.json`; routing patterns are hardcoded in `scripts/classify.sh` |
 | Codex exec times out | Large codebase, slow read | Increase timeout in `codex-exec.sh` (line with `timeout 120`) |
 
 ---
@@ -269,7 +269,7 @@ No telemetry is sent anywhere. The only external call is `codex exec` → OpenAI
 claude-codex/
 ├── plugin.json                  # Plugin manifest: declares hooks, agents, skills, commands
 ├── config/
-│   ├── routing-rules.json       # Thresholds, model names, scoring weights (editable)
+│   ├── routing-rules.json       # Thresholds and model names (editable); routing patterns live in classify.sh
 │   └── experts/                 # One system prompt per task category (editable)
 │       ├── code-generator.md
 │       ├── test-writer.md

@@ -4,7 +4,7 @@
 # Fires on every user message. Classifies the prompt, and if the task is
 # mechanical enough for Codex delegation, pre-computes the answer via
 # `codex exec` and injects it as additionalContext so Claude can relay it
-# with minimal token usage (~80% savings vs full Claude response).
+# with minimal token usage (~95% savings vs full Claude response).
 #
 # Input (stdin):  JSON  { message, cwd, session_id, transcript_path }
 # Output (stdout): JSON { hookSpecificOutput: { hookEventName, additionalContext } }
@@ -29,11 +29,10 @@ if [[ -z "$HOOK_INPUT" ]]; then
   exit 0
 fi
 
-# Parse both fields in a single jq call; use tab as delimiter (safe: neither
-# field normally contains tabs).
-_PARSED=$(echo "$HOOK_INPUT" | jq -r '(.message // "") + "\t" + (.cwd // "")' 2>/dev/null || printf '\t')
-MESSAGE="${_PARSED%%$'\t'*}"
-CWD="${_PARSED#*$'\t'}"
+# Parse fields separately — tab-delimiter approach breaks if message contains tabs.
+MESSAGE=$(echo "$HOOK_INPUT" | jq -r '.message // ""' 2>/dev/null || true)
+CWD=$(echo "$HOOK_INPUT" | jq -r '.cwd // ""' 2>/dev/null || true)
+TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path // ""' 2>/dev/null || true)
 
 # Resolve CWD fallback
 if [[ -z "$CWD" ]] || [[ ! -d "$CWD" ]]; then
@@ -43,6 +42,41 @@ fi
 # Skip empty or trivially short messages
 if [[ -z "$MESSAGE" ]] || [[ ${#MESSAGE} -lt 10 ]]; then
   exit 0
+fi
+
+# ── Budget-aware threshold ─────────────────────────────────────────────────────
+# Transcript size is a reliable proxy for session token usage. As the session
+# grows, we lower the delegate threshold so more tasks get offloaded to Codex,
+# conserving the remaining Claude budget.
+
+DELEGATE_THRESHOLD_OVERRIDE=""
+if [[ -n "$TRANSCRIPT_PATH" ]] && [[ -f "$TRANSCRIPT_PATH" ]]; then
+  TRANSCRIPT_BYTES=$(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null | tr -d '[:space:]' || echo 0)
+
+  RULES_FILE="${PLUGIN_ROOT}/config/routing-rules.json"
+  if command -v jq &>/dev/null && [[ -f "$RULES_FILE" ]]; then
+    _BUDGET=$(jq -r '
+      .budget_aware as $b |
+      if $b.enabled then
+        [$b.transcript_size_thresholds.medium_bytes // 200000,
+         $b.transcript_size_thresholds.high_bytes   // 350000,
+         $b.delegate_thresholds.medium_usage         // 12,
+         $b.delegate_thresholds.high_usage           // 4] | map(tostring) | join(" ")
+      else "disabled" end' "$RULES_FILE" 2>/dev/null || echo "200000 350000 12 4")
+
+    if [[ "$_BUDGET" != "disabled" ]]; then
+      MEDIUM_BYTES=$(echo "$_BUDGET" | cut -d' ' -f1)
+      HIGH_BYTES=$(echo "$_BUDGET"   | cut -d' ' -f2)
+      MEDIUM_THRESH=$(echo "$_BUDGET" | cut -d' ' -f3)
+      HIGH_THRESH=$(echo "$_BUDGET"   | cut -d' ' -f4)
+
+      if [[ $TRANSCRIPT_BYTES -gt $HIGH_BYTES ]]; then
+        DELEGATE_THRESHOLD_OVERRIDE="$HIGH_THRESH"
+      elif [[ $TRANSCRIPT_BYTES -gt $MEDIUM_BYTES ]]; then
+        DELEGATE_THRESHOLD_OVERRIDE="$MEDIUM_THRESH"
+      fi
+    fi
+  fi
 fi
 
 # ── Guard: codex CLI required ─────────────────────────────────────────────────
@@ -55,14 +89,17 @@ fi
 # ── Classify the prompt ────────────────────────────────────────────────────────
 
 # Call scripts via explicit `bash` — no need to check/set executable bit.
-CLASSIFY_RESULT=$(bash "${PLUGIN_ROOT}/scripts/classify.sh" "$MESSAGE" 2>/dev/null || echo "UNSURE:classify-error:0")
+# Pass DELEGATE_THRESHOLD_OVERRIDE so budget-aware logic flows through to classify.sh.
+CLASSIFY_RESULT=$(DELEGATE_THRESHOLD_OVERRIDE="${DELEGATE_THRESHOLD_OVERRIDE}" \
+  bash "${PLUGIN_ROOT}/scripts/classify.sh" "$MESSAGE" 2>/dev/null || echo "UNSURE:classify-error:0")
 
 DECISION=$(echo "$CLASSIFY_RESULT" | cut -d: -f1)
 CATEGORY=$(echo "$CLASSIFY_RESULT" | cut -d: -f2)
 CONF_SCORE=$(echo "$CLASSIFY_RESULT" | cut -d: -f3)
 
-# Only proceed if decision is DELEGATE
+# Only proceed if decision is DELEGATE; otherwise count the task as Claude-handled.
 if [[ "$DECISION" != "DELEGATE" ]]; then
+  bash "${PLUGIN_ROOT}/scripts/token-tracker.sh" "$MESSAGE" "${CATEGORY:-unknown}" "" "CLAUDE" &>/dev/null &
   exit 0
 fi
 
@@ -87,7 +124,7 @@ bash "${PLUGIN_ROOT}/scripts/token-tracker.sh" "$MESSAGE" "$CATEGORY" "$CODEX_OU
 # ── Build additionalContext ────────────────────────────────────────────────────
 #
 # The injected context instructs Claude to relay the pre-computed answer
-# verbatim — this is what drives the ~80% token reduction.
+# verbatim — this is what drives the ~95% token reduction.
 
 ADDITIONAL_CONTEXT="=== CLAUDE-CODEX AUTOMATIC DELEGATION ===
 Routing decision : DELEGATED (confidence score: ${CONF_SCORE})
@@ -112,7 +149,7 @@ You MUST follow these rules in your response:
    > **[Claude note]:** <your correction>
 6. EXCEPTION: If the Codex output is \"NO_CHANGES_NEEDED\" for a formatting task, relay that message directly.
 
-Estimated token savings from this delegation: ~80% vs. a full Claude response."
+Estimated token savings from this delegation: ~95% vs. a full Claude response."
 
 # ── Emit JSON ──────────────────────────────────────────────────────────────────
 

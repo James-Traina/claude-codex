@@ -1,0 +1,101 @@
+{
+  "skill_name": "claude-codex",
+  "description": "Evals for the claude-codex plugin. Tests cover the classify.sh routing script and the /codex command behavior.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "classify-bare-format",
+      "prompt": "Run the classify.sh script with the single-word prompt 'format' and report the full output line.",
+      "expected_output": "DELEGATE:format:<score> — the decision must be DELEGATE with category 'format'. Before the fix, this returned UNSURE or CLAUDE because the pattern required a trailing space.",
+      "test_command": "bash /Users/jat406/GitHub/claude-codex/scripts/classify.sh 'format'",
+      "assertions": [
+        {
+          "name": "decision-is-delegate",
+          "description": "Output starts with DELEGATE:",
+          "check": "startswith('DELEGATE:')"
+        },
+        {
+          "name": "category-is-format",
+          "description": "Category field is 'format'",
+          "check": "contains(':format:')"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "classify-code-generation",
+      "prompt": "Run the classify.sh script with the prompt 'write a getUser function that fetches a user by ID from the database' and report the full output line.",
+      "expected_output": "DELEGATE:code-generator:<score> — code generation tasks should delegate.",
+      "test_command": "bash /Users/jat406/GitHub/claude-codex/scripts/classify.sh 'write a getUser function that fetches a user by ID from the database'",
+      "assertions": [
+        {
+          "name": "decision-is-delegate",
+          "description": "Output starts with DELEGATE:",
+          "check": "startswith('DELEGATE:')"
+        },
+        {
+          "name": "category-is-code-generator",
+          "description": "Category field is 'code-generator'",
+          "check": "contains(':code-generator:')"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "classify-why-question-stays-claude",
+      "prompt": "Run the classify.sh script with the prompt 'why does my app crash when I call getUserById with null' and report the full output line.",
+      "expected_output": "CLAUDE:reasoning-question or debugging-task:<score> — 'why' questions and debugging must stay with Claude.",
+      "test_command": "bash /Users/jat406/GitHub/claude-codex/scripts/classify.sh 'why does my app crash when I call getUserById with null'",
+      "assertions": [
+        {
+          "name": "decision-is-claude",
+          "description": "Output starts with CLAUDE:",
+          "check": "startswith('CLAUDE:')"
+        },
+        {
+          "name": "score-is-negative",
+          "description": "Score is negative (strong CLAUDE signal)",
+          "check": "score < 0"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "classify-test-writing",
+      "prompt": "Run the classify.sh script with the prompt 'write unit tests for the getUserById function' and report the full output line.",
+      "expected_output": "DELEGATE:test-writer:<score> — test writing should delegate with test-writer category.",
+      "test_command": "bash /Users/jat406/GitHub/claude-codex/scripts/classify.sh 'write unit tests for the getUserById function'",
+      "assertions": [
+        {
+          "name": "decision-is-delegate",
+          "description": "Output starts with DELEGATE:",
+          "check": "startswith('DELEGATE:')"
+        },
+        {
+          "name": "category-is-test-writer",
+          "description": "Category field is 'test-writer'",
+          "check": "contains(':test-writer:')"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "classify-lint-bare",
+      "prompt": "Run the classify.sh script with the single-word prompt 'lint' and report the full output line.",
+      "expected_output": "DELEGATE:format:<score> — bare 'lint' should delegate like bare 'format'.",
+      "test_command": "bash /Users/jat406/GitHub/claude-codex/scripts/classify.sh 'lint'",
+      "assertions": [
+        {
+          "name": "decision-is-delegate",
+          "description": "Output starts with DELEGATE:",
+          "check": "startswith('DELEGATE:')"
+        },
+        {
+          "name": "category-is-format",
+          "description": "Category field is 'format'",
+          "check": "contains(':format:')"
+        }
+      ]
+    }
+  ]
+}
