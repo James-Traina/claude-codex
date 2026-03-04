@@ -1,0 +1,28 @@
+{
+  "name": "claude-codex",
+  "version": "1.0.0",
+  "description": "Intelligent task router that automatically delegates mechanical coding tasks to OpenAI Codex, reducing Anthropic token usage by 60-85% on simple tasks.",
+  "author": {
+    "name": "James Traina"
+  },
+  "hooks": [
+    {
+      "event": "SessionStart",
+      "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\""
+    },
+    {
+      "event": "UserPromptSubmit",
+      "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.sh\""
+    }
+  ],
+  "agents": [
+    "agents/codex-agent.md"
+  ],
+  "skills": [
+    "skills/delegate.md"
+  ],
+  "commands": [
+    "commands/codex.md",
+    "commands/savings.md"
+  ]
+}
