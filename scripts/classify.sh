@@ -34,9 +34,7 @@ if command -v jq &>/dev/null && [[ -f "${PLUGIN_ROOT}/config/routing-rules.json"
   # Single jq pass — read all three thresholds at once.
   _THRESH=$(jq -r '.thresholds | [.delegate_threshold // 25, .claude_threshold // -20, .max_prompt_words_for_delegation // 120] | map(tostring) | join(" ")' \
     "${PLUGIN_ROOT}/config/routing-rules.json" 2>/dev/null || echo "25 -20 120")
-  DELEGATE_THRESHOLD=$(echo "$_THRESH" | cut -d' ' -f1)
-  CLAUDE_THRESHOLD=$(echo "$_THRESH" | cut -d' ' -f2)
-  MAX_WORDS=$(echo "$_THRESH" | cut -d' ' -f3)
+  read -r DELEGATE_THRESHOLD CLAUDE_THRESHOLD MAX_WORDS <<< "$_THRESH"
 else
   MAX_WORDS=120
 fi
@@ -240,6 +238,14 @@ if matches_pattern "$LOWER" "(explain[[:space:]]|help[[:space:]]+me[[:space:]]+u
   REASON="${REASON:-explanation-request}"
 fi
 
+# "How do/can/would/should I/we/you X" — interrogative framing signals want-to-know,
+# not a pure imperative. e.g. "how do I implement auth" sounds like code-gen but the
+# user wants guidance, not a raw code drop. Cancel out the delegate signal.
+if matches_pattern "$LOWER" "how[[:space:]]+(do|can|would|should)[[:space:]]+(i|we|you)[[:space:]]"; then
+  SCORE=$((SCORE - 20))
+  REASON="${REASON:-how-to-question}"
+fi
+
 # Multiple file paths (3+ slashes → multi-file context → keep Claude)
 # grep -o exits 1 when there are no matches; || echo 0 handles that safely.
 SLASH_COUNT=$(echo "$PROMPT" | grep -o '/' 2>/dev/null | wc -l | tr -d '[:space:]' || echo 0)
@@ -253,9 +259,11 @@ if echo "$PROMPT" | grep -q '```'; then
   SCORE=$((SCORE - 15))
 fi
 
-# Long prompt penalty (> 50 words)
+# Long prompt penalty (> 50 words) — reduced from -15 to -8 so that well-specified
+# longer tasks (e.g. "write a complete CRUD API with validation and tests") can still
+# cross the delegate threshold when combined with strong category signals.
 if [[ $WORD_COUNT -gt 50 ]]; then
-  SCORE=$((SCORE - 15))
+  SCORE=$((SCORE - 10))
 fi
 
 # ── Routing decision ──────────────────────────────────────────────────────────

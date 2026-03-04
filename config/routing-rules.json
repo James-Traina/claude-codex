@@ -3,10 +3,10 @@
   "_comment_score": "classify.sh outputs a score. DELEGATE if >= delegate_threshold AND a category was matched. CLAUDE if <= claude_threshold.",
 
   "thresholds": {
-    "delegate_threshold": 25,
+    "delegate_threshold": 20,
     "claude_threshold": -20,
     "min_prompt_words": 3,
-    "max_prompt_words_for_delegation": 120
+    "max_prompt_words_for_delegation": 200
   },
 
   "models": {
@@ -35,15 +35,21 @@
 
   "budget_aware": {
     "enabled": true,
-    "_comment": "Transcript size (bytes) is used as a proxy for session token usage. As the session grows, the delegate threshold is lowered so more tasks get routed to Codex.",
+    "_comment": "Budget detection: prefers CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION env var (exact); falls back to transcript byte size (proxy). As usage grows, delegate_threshold is lowered so more tasks route to Codex.",
+    "context_window_thresholds": {
+      "_comment": "Used when CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION env var is available (0.0–1.0).",
+      "medium_fraction": 0.4,
+      "high_fraction":   0.7
+    },
     "transcript_size_thresholds": {
+      "_comment": "Fallback when env var is not available.",
       "medium_bytes": 200000,
-      "high_bytes":   350000
+      "high_bytes":   500000
     },
     "delegate_thresholds": {
-      "normal":       25,
-      "medium_usage": 12,
-      "high_usage":    4
+      "normal":       20,
+      "medium_usage": 10,
+      "high_usage":    5
     }
   },
 

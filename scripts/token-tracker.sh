@@ -120,27 +120,18 @@ if command -v jq &>/dev/null; then
   CURRENT=$(cat "$STATE_FILE")
 
   if [[ "$DECISION" == "DELEGATE" ]]; then
-    TOTAL_DELEGATED=$(echo "$CURRENT" | jq -r '.total_delegated // 0')
-    TOTAL_SAVINGS=$(echo "$CURRENT" | jq -r '.estimated_savings_usd // 0')
-    NEW_DELEGATED=$(( TOTAL_DELEGATED + 1 ))
-    NEW_SAVINGS=$(awk "BEGIN { printf \"%.6f\", $TOTAL_SAVINGS + $SAVINGS }")
-
+    # Read and update in one jq pass — avoids two separate jq reads of CURRENT.
     echo "$CURRENT" | jq \
-      --argjson delegated "$NEW_DELEGATED" \
-      --arg savings "$NEW_SAVINGS" \
+      --arg savings "$SAVINGS" \
       --arg ts "$TIMESTAMP" \
-      '.total_delegated = $delegated |
-       .estimated_savings_usd = ($savings | tonumber) |
+      '.total_delegated = (.total_delegated // 0) + 1 |
+       .estimated_savings_usd = ((.estimated_savings_usd // 0) + ($savings | tonumber)) |
        .last_delegation = $ts' > "${STATE_FILE}.tmp" \
       && mv "${STATE_FILE}.tmp" "$STATE_FILE"
   else
     # Non-delegated task: increment total_claude for accurate delegation-rate tracking.
-    TOTAL_CLAUDE=$(echo "$CURRENT" | jq -r '.total_claude // 0')
-    NEW_CLAUDE=$(( TOTAL_CLAUDE + 1 ))
-
     echo "$CURRENT" | jq \
-      --argjson claude "$NEW_CLAUDE" \
-      '.total_claude = $claude' > "${STATE_FILE}.tmp" \
+      '.total_claude = (.total_claude // 0) + 1' > "${STATE_FILE}.tmp" \
       && mv "${STATE_FILE}.tmp" "$STATE_FILE"
   fi
 fi

@@ -29,10 +29,13 @@ if [[ -z "$HOOK_INPUT" ]]; then
   exit 0
 fi
 
-# Parse fields separately — tab-delimiter approach breaks if message contains tabs.
-MESSAGE=$(echo "$HOOK_INPUT" | jq -r '.message // ""' 2>/dev/null || true)
-CWD=$(echo "$HOOK_INPUT" | jq -r '.cwd // ""' 2>/dev/null || true)
-TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path // ""' 2>/dev/null || true)
+# Parse all fields in one jq call — avoids forking three subprocesses on every message.
+# @sh quoting makes the eval safe for any message content including quotes and newlines.
+eval "$(echo "$HOOK_INPUT" | jq -r '
+  "MESSAGE=" + (.message // "" | @sh),
+  "CWD=" + (.cwd // "" | @sh),
+  "TRANSCRIPT_PATH=" + (.transcript_path // "" | @sh)
+' 2>/dev/null || echo 'MESSAGE="" CWD="" TRANSCRIPT_PATH=""')"
 
 # Resolve CWD fallback
 if [[ -z "$CWD" ]] || [[ ! -d "$CWD" ]]; then
@@ -45,31 +48,42 @@ if [[ -z "$MESSAGE" ]] || [[ ${#MESSAGE} -lt 10 ]]; then
 fi
 
 # ── Budget-aware threshold ─────────────────────────────────────────────────────
-# Transcript size is a reliable proxy for session token usage. As the session
-# grows, we lower the delegate threshold so more tasks get offloaded to Codex,
-# conserving the remaining Claude budget.
+# As the session consumes more of the context window, lower the delegate
+# threshold so mechanical tasks increasingly route to Codex, preserving what
+# remains for work only Claude can do.
+#
+# Detection priority:
+#   1. CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION — injected by Claude Code (0.0–1.0)
+#   2. Transcript byte size — reliable proxy when env var is absent
 
 DELEGATE_THRESHOLD_OVERRIDE=""
-if [[ -n "$TRANSCRIPT_PATH" ]] && [[ -f "$TRANSCRIPT_PATH" ]]; then
-  TRANSCRIPT_BYTES=$(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null | tr -d '[:space:]' || echo 0)
+RULES_FILE="${PLUGIN_ROOT}/config/routing-rules.json"
+if [[ -f "$RULES_FILE" ]]; then
+  # Single jq call reads both fraction and byte thresholds to avoid branching jq.
+  _BUDGET=$(jq -r '
+    .budget_aware as $b |
+    if $b.enabled then
+      [$b.context_window_thresholds.medium_fraction // 0.4,
+       $b.context_window_thresholds.high_fraction   // 0.7,
+       $b.transcript_size_thresholds.medium_bytes   // 200000,
+       $b.transcript_size_thresholds.high_bytes     // 350000,
+       $b.delegate_thresholds.medium_usage          // 12,
+       $b.delegate_thresholds.high_usage             // 4] | map(tostring) | join(" ")
+    else "disabled" end' "$RULES_FILE" 2>/dev/null || echo "0.4 0.7 200000 350000 12 4")
 
-  RULES_FILE="${PLUGIN_ROOT}/config/routing-rules.json"
-  if command -v jq &>/dev/null && [[ -f "$RULES_FILE" ]]; then
-    _BUDGET=$(jq -r '
-      .budget_aware as $b |
-      if $b.enabled then
-        [$b.transcript_size_thresholds.medium_bytes // 200000,
-         $b.transcript_size_thresholds.high_bytes   // 350000,
-         $b.delegate_thresholds.medium_usage         // 12,
-         $b.delegate_thresholds.high_usage           // 4] | map(tostring) | join(" ")
-      else "disabled" end' "$RULES_FILE" 2>/dev/null || echo "200000 350000 12 4")
+  if [[ "$_BUDGET" != "disabled" ]]; then
+    read -r MEDIUM_FRAC HIGH_FRAC MEDIUM_BYTES HIGH_BYTES MEDIUM_THRESH HIGH_THRESH <<< "$_BUDGET"
 
-    if [[ "$_BUDGET" != "disabled" ]]; then
-      MEDIUM_BYTES=$(echo "$_BUDGET" | cut -d' ' -f1)
-      HIGH_BYTES=$(echo "$_BUDGET"   | cut -d' ' -f2)
-      MEDIUM_THRESH=$(echo "$_BUDGET" | cut -d' ' -f3)
-      HIGH_THRESH=$(echo "$_BUDGET"   | cut -d' ' -f4)
-
+    if [[ -n "${CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION:-}" ]]; then
+      # Exact signal: context window fraction provided by Claude Code.
+      if awk "BEGIN { exit !(${CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION} > ${HIGH_FRAC}) }"; then
+        DELEGATE_THRESHOLD_OVERRIDE="$HIGH_THRESH"
+      elif awk "BEGIN { exit !(${CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION} > ${MEDIUM_FRAC}) }"; then
+        DELEGATE_THRESHOLD_OVERRIDE="$MEDIUM_THRESH"
+      fi
+    elif [[ -n "$TRANSCRIPT_PATH" ]] && [[ -f "$TRANSCRIPT_PATH" ]]; then
+      # Proxy: transcript file size correlates with cumulative token usage.
+      TRANSCRIPT_BYTES=$(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null | tr -d '[:space:]' || echo 0)
       if [[ $TRANSCRIPT_BYTES -gt $HIGH_BYTES ]]; then
         DELEGATE_THRESHOLD_OVERRIDE="$HIGH_THRESH"
       elif [[ $TRANSCRIPT_BYTES -gt $MEDIUM_BYTES ]]; then
@@ -93,9 +107,7 @@ fi
 CLASSIFY_RESULT=$(DELEGATE_THRESHOLD_OVERRIDE="${DELEGATE_THRESHOLD_OVERRIDE}" \
   bash "${PLUGIN_ROOT}/scripts/classify.sh" "$MESSAGE" 2>/dev/null || echo "UNSURE:classify-error:0")
 
-DECISION=$(echo "$CLASSIFY_RESULT" | cut -d: -f1)
-CATEGORY=$(echo "$CLASSIFY_RESULT" | cut -d: -f2)
-CONF_SCORE=$(echo "$CLASSIFY_RESULT" | cut -d: -f3)
+IFS=: read -r DECISION CATEGORY CONF_SCORE <<< "$CLASSIFY_RESULT"
 
 # Only proceed if decision is DELEGATE; otherwise count the task as Claude-handled.
 if [[ "$DECISION" != "DELEGATE" ]]; then
