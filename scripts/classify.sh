@@ -75,7 +75,7 @@ REASON=""
 # The optional identifier group ([a-z_][a-z0-9_]*[[:space:]]+)? covers the common
 # "write a getUserById function" form where the name precedes the type noun.
 if matches_pattern "$LOWER" \
-   "(write|create|generate|implement)[[:space:]]+(a[[:space:]]+|an[[:space:]]+|the[[:space:]]+)?(new[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?(function|method|class|interface|type|enum|struct|dto|component|hook|service|controller|handler|middleware|route|endpoint|schema|migration|model|resolver|repository|adapter|mixin|decorator|validator|serializer|deserializer)"; then
+   "(write|create|generate|implement)[[:space:]]+(a[[:space:]]+|an[[:space:]]+|the[[:space:]]+)?(new[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?([a-z_][a-z0-9_]*[[:space:]]+)?(function|method|class|interface|type|enum|struct|dto|component|hook|service|controller|handler|middleware|route|endpoint|schema|migration|model|resolver|repository|adapter|mixin|decorator|validator|serializer|deserializer)"; then
   SCORE=$((SCORE + 30))
   CATEGORY="code-generator"
 fi
@@ -138,7 +138,7 @@ fi
 # Pattern 2: verb + optional "the/this" + identifier + type noun (e.g. "rename the getUserById function")
 # Pattern 3: simple "rename X to Y" form without type noun
 if matches_pattern "$LOWER" \
-   "(rename|extract|inline|move)[[:space:]]+(the[[:space:]]+|this[[:space:]]+)?[a-z_][a-z0-9_]*[[:space:]]+(function|method|variable|const(ant)?|class|interface|type|component|module)"; then
+   "(rename|extract|inline|move|refactor)[[:space:]]+(the[[:space:]]+|this[[:space:]]+)?[a-z_][a-z0-9_]*[[:space:]]+(function|method|variable|const(ant)?|class|interface|type|component|module)"; then
   SCORE=$((SCORE + 20))
   CATEGORY="${CATEGORY:-refactor}"
 fi
