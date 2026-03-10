@@ -1,7 +1,7 @@
 ---
 name: savings
 description: Show a summary of token savings achieved by claude-codex delegation.
-arguments: []
+allowed-tools: Read, Bash
 ---
 
 # /savings — Token Savings Report
@@ -71,13 +71,3 @@ Run: npm install -g @openai/codex && codex auth
 Or use /codex <task> to delegate manually.
 ```
 
-## Tips Section
-
-Always end the report with:
-
-```
-**To maximise savings:**
-- Phrase generation tasks explicitly: "write a function that..." triggers automatic delegation
-- Use `/codex <task>` for direct delegation when the automatic routing misses a task
-- Check routing decisions in: ~/.claude/plugins/claude-codex/savings.log
-```

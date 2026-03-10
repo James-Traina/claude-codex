@@ -28,7 +28,7 @@ fi
 # ── Resolve plugin root ────────────────────────────────────────────────────────
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-RULES="${PLUGIN_ROOT}/config/routing-rules.json"
+RULES="${PLUGIN_ROOT}/settings.json"
 
 # ── Validate codex CLI ────────────────────────────────────────────────────────
 
@@ -56,12 +56,8 @@ fi
 
 # ── Load expert persona ────────────────────────────────────────────────────────
 
-EXPERT_FILE="${PLUGIN_ROOT}/config/experts/${CATEGORY}.md"
-if [[ -f "$EXPERT_FILE" ]]; then
-  EXPERT_CONTEXT=$(cat "$EXPERT_FILE")
-else
-  EXPERT_CONTEXT="You are a senior software engineer. Write clean, idiomatic, production-ready code."
-fi
+EXPERT_FILE="${PLUGIN_ROOT}/scripts/experts/${CATEGORY}.md"
+EXPERT_CONTEXT=$(cat "$EXPERT_FILE" 2>/dev/null || echo "You are a senior software engineer. Write clean, idiomatic, production-ready code.")
 
 # ── Build full prompt ──────────────────────────────────────────────────────────
 
@@ -114,7 +110,11 @@ OUTPUT=$(
     "$FULL_PROMPT" 2>/dev/null
 ) || {
   EXIT_CODE=$?
-  echo "codex-exec.sh: codex exec failed with exit code ${EXIT_CODE}" >&2
+  if [[ $EXIT_CODE -eq 124 ]] || [[ $EXIT_CODE -eq 137 ]]; then
+    echo "codex-exec.sh: codex exec timed out after 120s (exit code ${EXIT_CODE})" >&2
+  else
+    echo "codex-exec.sh: codex exec failed with exit code ${EXIT_CODE}" >&2
+  fi
   exit "$EXIT_CODE"
 }
 

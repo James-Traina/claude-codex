@@ -1,19 +1,20 @@
 {
   "name": "claude-codex",
-  "version": "1.0.0",
-  "description": "Intelligent task router that automatically delegates mechanical coding tasks to OpenAI Codex, reducing Anthropic token usage by 60-85% on simple tasks.",
+  "version": "1.1.0",
+  "description": "Routes mechanical coding tasks — test writing, documentation, formatting, and code generation — to OpenAI Codex instead of Claude, cutting token costs on work that doesn't need deep reasoning.",
   "author": {
-    "name": "James Traina"
+    "name": "James Traina",
+    "url": "https://github.com/James-Traina"
   },
+  "homepage": "https://github.com/James-Traina/claude-codex",
   "repository": "https://github.com/James-Traina/claude-codex",
   "license": "MIT",
   "keywords": [
-    "codex",
-    "routing",
-    "token-optimization",
-    "productivity",
     "openai",
-    "task-delegation",
-    "cost-savings"
+    "codex",
+    "token-savings",
+    "routing",
+    "delegation",
+    "cost-reduction"
   ]
 }

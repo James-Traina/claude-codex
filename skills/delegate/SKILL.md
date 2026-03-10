@@ -1,28 +1,33 @@
 ---
 name: delegate
-description: |
-  Required protocol for routing any task to OpenAI Codex. Handles @codex, codex:, "delegate to codex", "save tokens", "use the cheaper model", "second opinion", and "sanity check via codex" requests. Do not handle these yourself — always go through this skill for proper expert selection and attribution.
-
-  INVOKE IMMEDIATELY (before doing anything else) when the user says any variant of: delegate, codex, @codex, save tokens, cheaper model, use codex, send to codex, let codex handle it, second opinion, sanity check.
-
-  Also invoke proactively mid-reasoning whenever you feel uncertain and want an independent agent to verify your conclusion before presenting it to the user.
-
-  DO NOT trigger for: tasks the UserPromptSubmit hook already delegated (arrive pre-tagged in additionalContext), security review, auth design, or tasks requiring this full conversation's context.
+description: >-
+  Use this skill when the user explicitly routes work to Codex or wants an
+  independent verification pass. Triggers on: "@codex", "delegate to codex",
+  "use codex for this", "send this to codex", "save tokens", "use the cheaper
+  model", "let codex handle it", "get a second opinion", "sanity check via
+  codex", "verify this independently". Also triggers mid-reasoning when Claude
+  wants an independent agent to confirm a conclusion before presenting it.
+  Do not trigger for tasks the UserPromptSubmit hook already delegated
+  (those arrive pre-tagged in additionalContext), security review, auth
+  design, or tasks that require the full conversation history.
 ---
 
 # Delegation Assessment & Dispatch
 
-When this skill is triggered, follow this sequence:
+Act immediately — no confirmation needed. Pick the most reasonable
+interpretation and proceed. Only pause if the task is on the DO NOT trigger
+list above.
 
 ## 1. Identify What to Delegate
 
-State the precise sub-task you want Codex to handle. This should be self-contained — a fresh agent with only this description and access to the codebase should be able to complete it.
+State the precise sub-task for Codex. It must be self-contained: a fresh agent
+with only this description and read access to the codebase should complete it.
 
-If you triggered this because of **uncertainty**, frame the task as: "Independently verify: [your conclusion]. Return either 'Confirmed' with a one-sentence reason, or 'Correction: [what's actually right]'."
+- **Verification request** → frame as: "Independently verify: [your conclusion].
+  Return 'Confirmed: <reason>' or 'Correction: <what's right>'."
+- **Budget offload** → frame as you would frame it to any capable engineer.
 
-If you triggered this because of **budget / offloading**, frame the task as you would frame it to any capable engineer.
-
-## 2. Select the Right Expert Category
+## 2. Select Expert Category
 
 | Scenario | Category |
 |---|---|
@@ -33,39 +38,39 @@ If you triggered this because of **budget / offloading**, frame the task as you 
 | Rename, extract, inline, restructure | `refactor` |
 | Fix formatting or style | `format` |
 
-When in doubt, use `analyst` — its expert persona is tuned to be direct and independent.
+When uncertain, use `analyst` — its persona is tuned to be direct and independent.
 
 ## 3. Dispatch to codex-agent
 
-Invoke the codex-agent with the task description, selected category, and the current working directory.
+Invoke the codex-agent with the task description, selected category, and
+current working directory. The codex-agent will select the sandbox level,
+run `codex exec`, and return formatted output.
 
-The codex-agent will select the sandbox level, run `codex exec`, and return formatted output.
-
-## 4. Present Results with Clear Attribution
+## 4. Present Results
 
 ```
-**[Delegated to Codex · <category>]**
+**[via Codex · <category>]**
 
 <codex output>
 ```
 
-If this was a **verification request**: present the result as "Codex confirms: ..." or "Codex disagrees: ..." and act accordingly — do not silently discard a correction.
+- **Verification result**: present as "Codex confirms: …" or "Codex disagrees: …"
+  and act accordingly. Never discard a correction silently.
+- Never present Codex output as your own work.
 
-Never present Codex output as your own work.
+## 5. Validate
 
-## 5. Validate (Dual-Gate Truthfulness)
+Before relying on the output:
+- **Code**: check for syntax errors, missing imports, obvious logic flaws.
+- **Analysis**: check that conclusions follow from the evidence.
+- **Verification**: check that confirmation/correction is internally consistent.
 
-Before relying on Codex output:
-- For code: check for structural/syntax errors, missing imports, and obvious logic flaws
-- For analysis: check that conclusions follow from the evidence presented
-- For verification: check that the confirmation/correction is internally consistent
-
-If something looks wrong:
+If something is wrong:
 > "**[Claude note]:** I've reviewed the Codex output and noticed [issue]. Corrected: [fix]"
 
 ## Escalation
 
-If Codex produces 2 successive wrong outputs for the same task:
-1. Stop delegating for this task
-2. Handle it directly
-3. Tell the user: "Codex produced inconsistent results here. I'm handling it directly."
+After 2 successive wrong outputs for the same task:
+1. Stop delegating for this task.
+2. Handle it directly.
+3. Tell the user: "Codex produced inconsistent results here. Handling it directly."

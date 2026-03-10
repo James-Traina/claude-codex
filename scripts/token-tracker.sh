@@ -52,36 +52,25 @@ OUTPUT_TOKENS=$(char_to_tokens "$OUTPUT_CHARS")
 CLAUDE_INPUT_COST_PER_TOKEN="0.000003"   # $3 / 1M
 CLAUDE_OUTPUT_COST_PER_TOKEN="0.000015"  # $15 / 1M
 
-# gpt-5.3-codex-spark cost (fast model, approximate)
+# gpt-5.3-codex cost (approximate)
 CODEX_INPUT_COST_PER_TOKEN="0.00000015"  # $0.15 / 1M
 CODEX_OUTPUT_COST_PER_TOKEN="0.0000006"  # $0.60 / 1M
 
-# Estimated Claude cost for this task (if NOT delegated)
-CLAUDE_COST=$(awk "BEGIN {
-  printf \"%.6f\", ($PROMPT_TOKENS * $CLAUDE_INPUT_COST_PER_TOKEN) + ($OUTPUT_TOKENS * $CLAUDE_OUTPUT_COST_PER_TOKEN)
-}")
-
-# Actual Codex cost
-CODEX_COST=$(awk "BEGIN {
-  printf \"%.6f\", ($PROMPT_TOKENS * $CODEX_INPUT_COST_PER_TOKEN) + ($OUTPUT_TOKENS * $CODEX_OUTPUT_COST_PER_TOKEN)
-}")
-
-# Savings this task
-SAVINGS=$(awk "BEGIN {
-  diff = $CLAUDE_COST - $CODEX_COST
-  printf \"%.6f\", (diff < 0 ? 0 : diff)
-}")
-
-SAVINGS_PCT=$(awk "BEGIN {
-  if ($CLAUDE_COST > 0) printf \"%.1f\", (($CLAUDE_COST - $CODEX_COST) / $CLAUDE_COST) * 100
-  else printf \"0.0\"
+# Compute all four cost values in a single awk call (avoids 4 subprocess forks).
+read -r CLAUDE_COST CODEX_COST SAVINGS SAVINGS_PCT < <(awk "BEGIN {
+  claude = ($PROMPT_TOKENS * $CLAUDE_INPUT_COST_PER_TOKEN) + ($OUTPUT_TOKENS * $CLAUDE_OUTPUT_COST_PER_TOKEN)
+  codex  = ($PROMPT_TOKENS * $CODEX_INPUT_COST_PER_TOKEN)  + ($OUTPUT_TOKENS * $CODEX_OUTPUT_COST_PER_TOKEN)
+  diff   = claude - codex
+  sav    = (diff < 0 ? 0 : diff)
+  pct    = (claude > 0) ? ((claude - codex) / claude * 100) : 0
+  printf \"%.6f %.6f %.6f %.1f\n\", claude, codex, sav, pct
 }")
 
 # ── Write JSONL log record (DELEGATE only — CLAUDE decisions skip the log) ────
 
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)
 
-if [[ "$DECISION" == "DELEGATE" ]]; then
+if [[ "$DECISION" == "DELEGATE" ]] || [[ "$DECISION" == "MANUAL_DELEGATE" ]]; then
   PROMPT_PREVIEW=$(echo "$PROMPT" | head -c 120 | tr '\n' ' ')
 
   if command -v jq &>/dev/null; then
@@ -119,7 +108,7 @@ fi
 if command -v jq &>/dev/null; then
   CURRENT=$(cat "$STATE_FILE")
 
-  if [[ "$DECISION" == "DELEGATE" ]]; then
+  if [[ "$DECISION" == "DELEGATE" ]] || [[ "$DECISION" == "MANUAL_DELEGATE" ]]; then
     # Read and update in one jq pass — avoids two separate jq reads of CURRENT.
     echo "$CURRENT" | jq \
       --arg savings "$SAVINGS" \

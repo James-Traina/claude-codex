@@ -1,0 +1,61 @@
+{
+  "_comment": "Routing thresholds and per-category model preferences for claude-codex.",
+  "_comment_score": "classify.sh outputs a score. DELEGATE if >= delegate_threshold AND a category was matched. CLAUDE if <= claude_threshold.",
+  "_comment_patterns": "Routing signal patterns are hardcoded in scripts/classify.sh — edit them there. This file controls only thresholds, models, reasoning effort, budget scaling, and sandbox levels.",
+
+  "thresholds": {
+    "delegate_threshold": 20,
+    "claude_threshold": -20,
+    "min_prompt_words": 3,
+    "max_prompt_words_for_delegation": 200
+  },
+
+  "models": {
+    "fast":    "gpt-5.3-codex",
+    "default": "gpt-5.3-codex",
+    "capable": "gpt-5.2"
+  },
+
+  "category_models": {
+    "code-generator": "default",
+    "test-writer":    "default",
+    "doc-writer":     "fast",
+    "refactor":       "fast",
+    "format":         "fast",
+    "analyst":        "default"
+  },
+
+  "reasoning_effort": {
+    "code-generator": "high",
+    "test-writer":    "high",
+    "doc-writer":     "medium",
+    "refactor":       "medium",
+    "format":         "low",
+    "analyst":        "high"
+  },
+
+  "budget_aware": {
+    "enabled": true,
+    "_comment": "Budget detection: prefers CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION env var (exact); falls back to transcript byte size (proxy). As usage grows, delegate_threshold is lowered so more tasks route to Codex.",
+    "context_window_thresholds": {
+      "_comment": "Used when CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION env var is available (0.0–1.0).",
+      "medium_fraction": 0.4,
+      "high_fraction":   0.7
+    },
+    "transcript_size_thresholds": {
+      "_comment": "Fallback when env var is not available.",
+      "medium_bytes": 200000,
+      "high_bytes":   500000
+    },
+    "delegate_thresholds": {
+      "normal":       20,
+      "medium_usage": 10,
+      "high_usage":    5
+    }
+  },
+
+  "sandbox": {
+    "auto_delegation": "read-only",
+    "manual_delegation": "workspace-write"
+  }
+}

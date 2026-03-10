@@ -1,5 +1,5 @@
 {
-  "description": "claude-codex hooks — automatically classify and delegate mechanical coding tasks to OpenAI Codex",
+  "description": "claude-codex hooks — classify prompts and route mechanical tasks to OpenAI Codex automatically",
   "hooks": {
     "SessionStart": [
       {
@@ -20,7 +20,7 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.sh\"",
-            "timeout": 30
+            "timeout": 120
           }
         ]
       }

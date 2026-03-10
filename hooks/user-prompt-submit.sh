@@ -10,7 +10,7 @@
 # Output (stdout): JSON { hookSpecificOutput: { hookEventName, additionalContext } }
 #   OR empty / non-zero exit to silently fall through to Claude.
 
-set -uo pipefail
+set -euo pipefail
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
@@ -57,33 +57,49 @@ fi
 #   2. Transcript byte size — reliable proxy when env var is absent
 
 DELEGATE_THRESHOLD_OVERRIDE=""
-RULES_FILE="${PLUGIN_ROOT}/config/routing-rules.json"
+RULES_FILE="${PLUGIN_ROOT}/settings.json"
 if [[ -f "$RULES_FILE" ]]; then
-  # Single jq call reads both fraction and byte thresholds to avoid branching jq.
-  _BUDGET=$(jq -r '
+  # Single jq call reads budget thresholds AND routing thresholds together, so
+  # classify.sh can receive them via env vars and skip its own settings.json read.
+  _CFG=$(jq -r '
     .budget_aware as $b |
-    if $b.enabled then
+    .thresholds   as $t |
+    (if $b.enabled then
       [$b.context_window_thresholds.medium_fraction // 0.4,
        $b.context_window_thresholds.high_fraction   // 0.7,
        $b.transcript_size_thresholds.medium_bytes   // 200000,
-       $b.transcript_size_thresholds.high_bytes     // 350000,
-       $b.delegate_thresholds.medium_usage          // 12,
-       $b.delegate_thresholds.high_usage             // 4] | map(tostring) | join(" ")
-    else "disabled" end' "$RULES_FILE" 2>/dev/null || echo "0.4 0.7 200000 350000 12 4")
+       $b.transcript_size_thresholds.high_bytes     // 500000,
+       $b.delegate_thresholds.medium_usage          // 10,
+       $b.delegate_thresholds.high_usage             // 5,
+       "enabled"]
+    else
+      [0, 0, 0, 0, 0, 0, "disabled"]
+    end +
+    [$t.delegate_threshold              // 20,
+     $t.claude_threshold                // -20,
+     $t.max_prompt_words_for_delegation // 200]) |
+    map(tostring) | join(" ")
+  ' "$RULES_FILE" 2>/dev/null || echo "0.4 0.7 200000 500000 10 5 disabled 20 -20 200")
 
-  if [[ "$_BUDGET" != "disabled" ]]; then
-    read -r MEDIUM_FRAC HIGH_FRAC MEDIUM_BYTES HIGH_BYTES MEDIUM_THRESH HIGH_THRESH <<< "$_BUDGET"
+  read -r MEDIUM_FRAC HIGH_FRAC MEDIUM_BYTES HIGH_BYTES MEDIUM_THRESH HIGH_THRESH \
+       BUDGET_ENABLED CLASSIFY_DELEGATE_THRESHOLD CLASSIFY_CLAUDE_THRESHOLD CLASSIFY_MAX_WORDS \
+       <<< "$_CFG"
 
+  # Export so classify.sh can skip its own settings.json read (saves one jq fork/message).
+  export CLASSIFY_DELEGATE_THRESHOLD CLASSIFY_CLAUDE_THRESHOLD CLASSIFY_MAX_WORDS
+
+  if [[ "$BUDGET_ENABLED" == "enabled" ]]; then
     if [[ -n "${CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION:-}" ]]; then
       # Exact signal: context window fraction provided by Claude Code.
-      if awk "BEGIN { exit !(${CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION} > ${HIGH_FRAC}) }"; then
-        DELEGATE_THRESHOLD_OVERRIDE="$HIGH_THRESH"
-      elif awk "BEGIN { exit !(${CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION} > ${MEDIUM_FRAC}) }"; then
-        DELEGATE_THRESHOLD_OVERRIDE="$MEDIUM_THRESH"
-      fi
-    elif [[ -n "$TRANSCRIPT_PATH" ]] && [[ -f "$TRANSCRIPT_PATH" ]]; then
+      DELEGATE_THRESHOLD_OVERRIDE=$(awk \
+        -v frac="$CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION" \
+        -v hi="$HIGH_FRAC"    -v hi_t="$HIGH_THRESH" \
+        -v med="$MEDIUM_FRAC" -v med_t="$MEDIUM_THRESH" \
+        'BEGIN { if (frac > hi) print hi_t; else if (frac > med) print med_t; else print "" }')
+    elif [[ -n "$TRANSCRIPT_PATH" ]]; then
       # Proxy: transcript file size correlates with cumulative token usage.
-      TRANSCRIPT_BYTES=$(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null | tr -d '[:space:]' || echo 0)
+      TRANSCRIPT_BYTES=$(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null || echo 0)
+      read -r TRANSCRIPT_BYTES <<< "$TRANSCRIPT_BYTES"
       if [[ $TRANSCRIPT_BYTES -gt $HIGH_BYTES ]]; then
         DELEGATE_THRESHOLD_OVERRIDE="$HIGH_THRESH"
       elif [[ $TRANSCRIPT_BYTES -gt $MEDIUM_BYTES ]]; then
@@ -114,6 +130,9 @@ if [[ "$DECISION" != "DELEGATE" ]]; then
   bash "${PLUGIN_ROOT}/scripts/token-tracker.sh" "$MESSAGE" "${CATEGORY:-unknown}" "" "CLAUDE" &>/dev/null &
   exit 0
 fi
+
+# Notify the user immediately — fires before the (potentially slow) codex exec.
+printf "↳ codex [%s]\n" "$CATEGORY" >&2
 
 # ── Execute via Codex ──────────────────────────────────────────────────────────
 
