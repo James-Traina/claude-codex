@@ -43,7 +43,8 @@ When uncertain, use `analyst` — its persona is tuned to be direct and independ
 ## 3. Dispatch to codex-agent
 
 Invoke the codex-agent with the task description, selected category, and
-current working directory.
+current working directory. The codex-agent will select the sandbox level,
+run `codex exec`, and return formatted output.
 
 ## 4. Present Results
 

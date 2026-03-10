@@ -6,3 +6,4 @@
 .claude/
 .evals/description-opt/workspace/
 .tests/reports/
+dist/
