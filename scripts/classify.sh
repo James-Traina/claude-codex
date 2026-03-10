@@ -24,19 +24,25 @@ fi
 # Normalise for matching: lowercase, collapse whitespace
 LOWER=$(echo "$PROMPT" | tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' ')
 
-# ── Load thresholds from routing-rules.json if jq is available ────────────────
+# ── Load thresholds from settings.json if jq is available ─────────────────────
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-DELEGATE_THRESHOLD=25
+DELEGATE_THRESHOLD=20
 CLAUDE_THRESHOLD=-20
 
-if command -v jq &>/dev/null && [[ -f "${PLUGIN_ROOT}/settings.json" ]]; then
+# When invoked from the hook, thresholds are pre-loaded via env vars so we skip
+# the jq read. Fall back to jq for standalone invocations (e.g. direct testing).
+if [[ -n "${CLASSIFY_DELEGATE_THRESHOLD:-}" ]]; then
+  DELEGATE_THRESHOLD="$CLASSIFY_DELEGATE_THRESHOLD"
+  CLAUDE_THRESHOLD="${CLASSIFY_CLAUDE_THRESHOLD:--20}"
+  MAX_WORDS="${CLASSIFY_MAX_WORDS:-200}"
+elif command -v jq &>/dev/null && [[ -f "${PLUGIN_ROOT}/settings.json" ]]; then
   # Single jq pass — read all three thresholds at once.
-  _THRESH=$(jq -r '.thresholds | [.delegate_threshold // 25, .claude_threshold // -20, .max_prompt_words_for_delegation // 120] | map(tostring) | join(" ")' \
-    "${PLUGIN_ROOT}/settings.json" 2>/dev/null || echo "25 -20 120")
+  _THRESH=$(jq -r '.thresholds | [.delegate_threshold // 20, .claude_threshold // -20, .max_prompt_words_for_delegation // 200] | map(tostring) | join(" ")' \
+    "${PLUGIN_ROOT}/settings.json" 2>/dev/null || echo "20 -20 200")
   read -r DELEGATE_THRESHOLD CLAUDE_THRESHOLD MAX_WORDS <<< "$_THRESH"
 else
-  MAX_WORDS=120
+  MAX_WORDS=200
 fi
 
 # Allow the hook to override the delegate threshold dynamically (e.g. budget-aware mode).
@@ -55,7 +61,7 @@ matches_pattern() {
 
 # ── Word-count guard ──────────────────────────────────────────────────────────
 
-WORD_COUNT=$(echo "$PROMPT" | wc -w | tr -d '[:space:]')
+read -r WORD_COUNT <<< "$(echo "$PROMPT" | wc -w)"
 if [[ $WORD_COUNT -gt $MAX_WORDS ]]; then
   echo "CLAUDE:prompt-too-long-for-auto-delegation:-10"
   exit 0
@@ -260,8 +266,8 @@ if matches_pattern "$LOWER" "how[[:space:]]+(do|can|would|should)[[:space:]]+(i|
 fi
 
 # Multiple file paths (3+ slashes → multi-file context → keep Claude)
-# grep -o exits 1 when there are no matches; || echo 0 handles that safely.
-SLASH_COUNT=$(echo "$PROMPT" | grep -o '/' 2>/dev/null | wc -l | tr -d '[:space:]' || echo 0)
+_slashes="${PROMPT//[^\/]/}"
+SLASH_COUNT="${#_slashes}"
 if [[ $SLASH_COUNT -ge 3 ]]; then
   SCORE=$((SCORE - 20))
   REASON="${REASON:-multi-file-context}"

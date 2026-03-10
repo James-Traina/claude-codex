@@ -57,11 +57,7 @@ fi
 # ── Load expert persona ────────────────────────────────────────────────────────
 
 EXPERT_FILE="${PLUGIN_ROOT}/scripts/experts/${CATEGORY}.md"
-if [[ -f "$EXPERT_FILE" ]]; then
-  EXPERT_CONTEXT=$(cat "$EXPERT_FILE")
-else
-  EXPERT_CONTEXT="You are a senior software engineer. Write clean, idiomatic, production-ready code."
-fi
+EXPERT_CONTEXT=$(cat "$EXPERT_FILE" 2>/dev/null || echo "You are a senior software engineer. Write clean, idiomatic, production-ready code.")
 
 # ── Build full prompt ──────────────────────────────────────────────────────────
 
