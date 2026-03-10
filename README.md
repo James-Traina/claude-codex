@@ -32,7 +32,7 @@ UserPromptSubmit hook fires (bash, zero Claude tokens)
         │
         ├── classify.sh scores the prompt with weighted pattern matching
         │
-        │     DELEGATE (score ≥ 25 AND category matched)
+        │     DELEGATE (score ≥ 20 AND category matched)
         │     ├── codex-exec.sh picks expert persona for the category
         │     ├── Detects project language from CWD (package.json, go.mod, etc.)
         │     ├── Builds full prompt: expert persona + project context + task
@@ -41,7 +41,7 @@ UserPromptSubmit hook fires (bash, zero Claude tokens)
         │     ├── token-tracker.sh logs the delegation (fire-and-forget)
         │     └── Hook returns additionalContext with Codex output + relay instructions
         │
-        │     CLAUDE (score ≤ -20, or UNSURE between -20 and 25)
+        │     CLAUDE (score ≤ -20, or UNSURE between -20 and 20)
         │     └── Fall through: Claude handles the task normally
         │
         ▼
@@ -69,12 +69,12 @@ If the hook fails for any reason (codex not installed, timeout, network error), 
 `scripts/classify.sh` assigns a numeric score to every prompt. Positive scores push toward delegation; negative scores push toward Claude.
 
 ```
-DELEGATE if: score ≥ 25  AND  a category was matched
+DELEGATE if: score ≥ 20  AND  a category was matched
 CLAUDE   if: score ≤ -20
 UNSURE   otherwise: Claude handles it (conservative fallback)
 ```
 
-The UNSURE zone between -20 and 25 intentionally keeps borderline tasks with Claude. Routing a debugging task to Codex wastes money on a bad answer; keeping a test-writing task with Claude just costs a bit more. When in doubt, the system keeps things with Claude.
+The UNSURE zone between -20 and 20 intentionally keeps borderline tasks with Claude. Routing a debugging task to Codex wastes money on a bad answer; keeping a test-writing task with Claude just costs a bit more. When in doubt, the system keeps things with Claude.
 
 ### Positive signals (add to score)
 
@@ -194,13 +194,13 @@ Claude is always given an escape hatch: if the Codex output is factually wrong, 
 
 ## Budget-aware threshold lowering
 
-As a Claude Code session grows, the context window fills up. Longer context means more expensive inference. `user-prompt-submit.sh` detects this and automatically lowers the delegation threshold, so mechanical tasks that normally score 18 (just below 25) start getting delegated when context pressure rises.
+As a Claude Code session grows, the context window fills up. Longer context means more expensive inference. `user-prompt-submit.sh` detects this and automatically lowers the delegation threshold, so mechanical tasks that normally score 18 (just below 20) start getting delegated when context pressure rises.
 
 Two detection methods, in priority order:
 
-1. `CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION` — Claude Code injects this env var (0.0–1.0) into hook processes. Above 40% usage, the threshold drops to 12. Above 70%, it drops to 4 — almost everything mechanical gets delegated.
+1. `CLAUDE_CONTEXT_WINDOW_USAGE_FRACTION` — Claude Code injects this env var (0.0–1.0) into hook processes. Above 40% usage, the threshold drops to 10. Above 70%, it drops to 5 — almost everything mechanical gets delegated.
 
-2. Transcript file size — when the env var is absent, the hook measures the transcript file's byte size as a proxy. Above 200 KB drops the threshold to 12; above 350 KB drops it to 4.
+2. Transcript file size — when the env var is absent, the hook measures the transcript file's byte size as a proxy. Above 200 KB drops the threshold to 10; above 500 KB drops it to 5.
 
 Configure all these values in `settings.json` under `budget_aware`.
 
@@ -366,7 +366,7 @@ This passes the follow-up task to Codex with full context of what it already did
 ```json
 {
   "thresholds": {
-    "delegate_threshold": 25,
+    "delegate_threshold": 20,
     "claude_threshold": -20,
     "min_prompt_words": 3,
     "max_prompt_words_for_delegation": 200
@@ -390,17 +390,17 @@ The *patterns* that generate scores are hardcoded in `scripts/classify.sh`, not 
     },
     "transcript_size_thresholds": {
       "medium_bytes": 200000,
-      "high_bytes": 350000
+      "high_bytes": 500000
     },
     "delegate_thresholds": {
-      "medium_usage": 12,
-      "high_usage": 4
+      "medium_usage": 10,
+      "high_usage": 5
     }
   }
 }
 ```
 
-At `high_usage` threshold of 4, almost any prompt with a positive category signal gets delegated.
+At `high_usage` threshold of 5, almost any prompt with a positive category signal gets delegated.
 
 ### `scripts/experts/<category>.md`
 

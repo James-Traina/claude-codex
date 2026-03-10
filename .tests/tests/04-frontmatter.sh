@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail  # -e omitted: sourced by run-all.sh which must not abort on test failures
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/helpers.sh"
 
 # Agents: must have name, description, model, tools

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail  # -e omitted: sourced by run-all.sh which must not abort on test failures
 
 # assert_file_exists <path> [description]
 assert_file_exists() {

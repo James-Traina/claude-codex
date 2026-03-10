@@ -45,7 +45,7 @@ skills/
 commands/
   codex.md                    /codex command
   savings.md                  /savings command
-settings.json                 Routing rules: thresholds, models, delegate/claude signal patterns
+settings.json                 Routing thresholds, models, budget config (signal patterns → classify.sh)
 ```
 
 ## Configuration (settings.json)
@@ -87,7 +87,7 @@ Automated quality evals for delegation trigger accuracy live in `.evals/`. Run m
 ### Adding a new expert category
 1. Create `scripts/experts/category-name.md` with the system prompt
 2. Add the category to `settings.json` under `category_models` and `reasoning_effort`
-3. Add delegate signal patterns to `settings.json` under `delegate_signals`
+3. Add delegate signal patterns to `scripts/classify.sh` (see the existing pattern blocks around line 70)
 4. Update `codex-exec.sh` to handle the new category name
 
 ### Adjusting routing thresholds
