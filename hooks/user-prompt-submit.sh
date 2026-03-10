@@ -115,6 +115,9 @@ if [[ "$DECISION" != "DELEGATE" ]]; then
   exit 0
 fi
 
+# Notify the user immediately — fires before the (potentially slow) codex exec.
+printf "↳ codex [%s]\n" "$CATEGORY" >&2
+
 # ── Execute via Codex ──────────────────────────────────────────────────────────
 
 # Run in a subshell so failure doesn't abort the hook; fall through on any error

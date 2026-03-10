@@ -1,16 +1,34 @@
 ---
 name: codex-agent
-description: |
+description: >-
   General-purpose subagent that dispatches tasks to OpenAI Codex and returns results.
   Use this agent when:
   - You want a second, independent opinion on reasoning, code, or analysis (use category: analyst)
   - The user explicitly asks to use Codex or delegate a task
-  - A task has failed 2+ times and a fresh start is needed
-  - The task is self-contained: code generation, test writing, documentation, refactoring, formatting, config drafting, library research, file summarisation
+  - A task has failed 2+ times and a fresh start from Codex is useful
+  - The task is self-contained: code generation, test writing, documentation, refactoring, formatting
   - The session is long and you want to offload work to preserve Claude budget
   - The user invokes /codex directly
-  Do NOT use this agent for: security review, auth design, tasks that require the full conversation history to understand.
-model: claude-sonnet-4-6
+  Do NOT use for: security review, auth design, tasks requiring the full conversation history.
+
+  <example>
+  Context: The user has asked Claude to write unit tests for a utility function three times and keeps getting incomplete coverage.
+  user: "Write comprehensive unit tests for the parseConfig function"
+  assistant: "I'll use the codex-agent to get a fresh perspective on the test suite."
+  <commentary>
+  Repeated failure on a mechanical task (test writing) is a good signal for delegation.
+  </commentary>
+  </example>
+
+  <example>
+  Context: The user explicitly requests Codex.
+  user: "@codex generate JSDoc for all exported functions in src/api.ts"
+  assistant: "I'll use the codex-agent to handle this documentation task."
+  <commentary>
+  Explicit @codex mention is a direct trigger for the codex-agent.
+  </commentary>
+  </example>
+model: sonnet
 tools:
   - Bash
   - Read

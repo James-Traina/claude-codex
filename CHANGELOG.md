@@ -2,8 +2,24 @@
 
 All notable changes to claude-codex are documented here.
 
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-Versioning follows [Semantic Versioning](https://semver.org/).
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning follows [Semantic Versioning](https://semver.org/).
+
+## [1.0.1] - 2026-03-09
+
+### Added
+- `CLAUDE.md` — plugin architecture guide and development reference
+- `.github/workflows/ci.yml` — CI pipeline: JSON validation, script permissions, test suite
+- `.tests/` — 59-test suite covering JSON validity, file existence, script integrity, frontmatter, and hook integrity
+- `## Updating` and `## License` sections to `README.md`
+
+### Changed
+- `agents/codex-agent.md`: `description: |` → `description: >-`; added two `<example>` blocks in frontmatter; `model: claude-sonnet-4-6` → `model: sonnet`
+- `commands/codex.md`: `arguments:` YAML array → `argument-hint:` string + `allowed-tools: Bash, Read`
+- `commands/savings.md`: `arguments: []` → `allowed-tools: Read, Bash`
+- `skills/delegate/SKILL.md`: `description:` → `>-` format
+- `hooks/hooks.json`: added top-level `description`; added `matcher: "*"` and `timeout: 10` to all hook entries
+- `hooks/user-prompt-submit.sh`: added immediate `↳ codex [category]` notification to stderr before exec
+- `evals/` → `.evals/` (hidden directory)
 
 ## [1.0.0] - 2026-03-04
 

@@ -1,7 +1,7 @@
 ---
 name: savings
 description: Show a summary of token savings achieved by claude-codex delegation.
-arguments: []
+allowed-tools: Read, Bash
 ---
 
 # /savings — Token Savings Report

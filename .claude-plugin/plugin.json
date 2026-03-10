@@ -9,5 +9,12 @@
   "homepage": "https://github.com/James-Traina/claude-codex",
   "repository": "https://github.com/James-Traina/claude-codex",
   "license": "MIT",
-  "keywords": ["openai", "codex", "token-savings", "routing", "delegation", "cost-reduction"]
+  "keywords": [
+    "openai",
+    "codex",
+    "token-savings",
+    "routing",
+    "delegation",
+    "cost-reduction"
+  ]
 }

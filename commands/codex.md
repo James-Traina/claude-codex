@@ -1,16 +1,8 @@
 ---
 name: codex
 description: Delegate a coding task explicitly to OpenAI Codex with optional sandbox and model control.
-arguments:
-  - name: prompt
-    description: The coding task to delegate to Codex
-    required: false
-  - name: sandbox
-    description: "Execution sandbox: read-only (default), workspace-write, or danger-full-access"
-    required: false
-  - name: model
-    description: "Model override: fast (gpt-5.3-codex-spark), default (gpt-5.3-codex), capable (gpt-5.2)"
-    required: false
+argument-hint: "[task] [--sandbox read-only|workspace-write|danger-full-access] [--model fast|default|capable]"
+allowed-tools: Bash, Read
 ---
 
 # /codex — Direct Codex Delegation

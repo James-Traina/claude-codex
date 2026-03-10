@@ -1,6 +1,6 @@
 ---
 name: delegate
-description: |
+description: >-
   Required protocol for routing any task to OpenAI Codex. Handles @codex, codex:, "delegate to codex", "save tokens", "use the cheaper model", "second opinion", and "sanity check via codex" requests. Do not handle these yourself — always go through this skill for proper expert selection and attribution.
 
   INVOKE IMMEDIATELY (before doing anything else) when the user says any variant of: delegate, codex, @codex, save tokens, cheaper model, use codex, send to codex, let codex handle it, second opinion, sanity check.

@@ -318,3 +318,13 @@ A developer writing 50 delegatable tasks per day saves ~$1–3/day, ~$20–60/mo
 - [`skills-directory/skill-codex`](https://github.com/skills-directory/skill-codex) — Direct CLI execution with session resumption
 
 **claude-codex** synthesises all three: proactive every-message scanning (jarrodwatts), expert personas (jarrodwatts), direct CLI execution (skill-codex + eddiearc), plus a persistent savings ledger and zero-touch automation.
+
+## Updating
+
+```bash
+/plugin update claude-codex
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
