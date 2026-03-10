@@ -60,8 +60,8 @@ settings.json                 Routing rules: thresholds, models, delegate/claude
 | `category_models` | Per-category model tier assignment |
 | `reasoning_effort` | Per-category reasoning effort (low/medium/high) |
 | `budget_aware` | Context-window-aware threshold lowering |
-| `delegate_signals` | Weighted patterns that increase delegation score |
-| `claude_signals` | Weighted patterns that decrease delegation score (negative weights) |
+
+Routing signal patterns (DELEGATE/CLAUDE weights) are hardcoded in `scripts/classify.sh` — edit them there. They are not configurable via settings.json.
 
 ## Testing
 

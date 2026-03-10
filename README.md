@@ -66,7 +66,7 @@ The classifier routes tasks into five expert personas. Each persona is a special
 | `format` | "format this", "apply prettier", "fix indentation" | `low` |
 | `analyst` | second opinion, uncertainty verification, general analysis | `high` |
 
-Each expert is configured in `config/experts/<category>.md`. You can edit these files to tune the instructions for your project's conventions.
+Each expert is configured in `scripts/experts/<category>.md`. Edit these files to tune the instructions for your project's conventions.
 
 ---
 
@@ -100,7 +100,7 @@ The classifier (`scripts/classify.sh`) assigns a numeric score to every prompt:
 - Contains code blocks: `-15`
 - Long prompt (> 50 words): `-10`
 
-You can adjust the thresholds in `config/routing-rules.json` (`delegate_threshold`, `claude_threshold`).
+Adjust thresholds in `settings.json` (`delegate_threshold`, `claude_threshold`). Routing signal patterns are hardcoded in `scripts/classify.sh`.
 
 ---
 
@@ -214,7 +214,7 @@ This continues the prior Codex session with full context of what was already don
 
 ## Configuration
 
-### `config/routing-rules.json`
+### `config/settings.json`
 
 | Key | Default | Description |
 |---|---|---|
@@ -259,8 +259,8 @@ No telemetry is sent anywhere. The only external call is `codex exec` → OpenAI
 | No `[via Codex]` responses appearing | `codex` not installed | `npm install -g @openai/codex` |
 | No `[via Codex]` responses appearing | Authentication expired | `codex auth` |
 | `jq: command not found` in hook | jq not installed | `brew install jq` |
-| Delegation routing something it shouldn't | Score threshold too low | Raise `delegate_threshold` in `routing-rules.json` |
-| Claude is delegating too little | Score threshold too high | Lower `delegate_threshold` in `routing-rules.json`; routing patterns are hardcoded in `scripts/classify.sh` |
+| Delegation routing something it shouldn't | Score threshold too low | Raise `delegate_threshold` in `settings.json` |
+| Claude is delegating too little | Score threshold too high | Lower `delegate_threshold` in `settings.json`; routing patterns are hardcoded in `scripts/classify.sh` |
 | Codex exec times out | Large codebase, slow read | Increase timeout in `codex-exec.sh` (line with `timeout 120`) |
 
 ---
@@ -269,30 +269,30 @@ No telemetry is sent anywhere. The only external call is `codex exec` → OpenAI
 
 ```
 claude-codex/
-├── plugin.json                  # Plugin manifest: declares hooks, agents, skills, commands
-├── config/
-│   ├── routing-rules.json       # Thresholds and model names (editable); routing patterns live in classify.sh
-│   └── experts/                 # One system prompt per task category (editable)
-│       ├── analyst.md
-│       ├── code-generator.md
-│       ├── test-writer.md
-│       ├── doc-writer.md
-│       ├── refactor.md
-│       └── format.md
+├── .claude-plugin/plugin.json   # Plugin manifest
+├── settings.json                # Thresholds, models, budget config (routing patterns → classify.sh)
 ├── agents/
-│   └── codex-agent.md           # Claude subagent: orchestrates explicit delegation calls
+│   └── codex-agent.md           # Subagent: runs classify.sh + codex-exec.sh
 ├── hooks/
-│   ├── session-start.sh         # Runs once at startup: checks deps, injects status
-│   └── user-prompt-submit.sh    # Main intelligence: classify → delegate → inject
+│   ├── hooks.json               # Hook definitions (SessionStart, UserPromptSubmit)
+│   ├── session-start.sh         # Checks deps, injects status
+│   └── user-prompt-submit.sh    # Main pipeline: classify → delegate → inject additionalContext
 ├── commands/
-│   ├── codex.md                 # /codex command: explicit delegation with sandbox control
-│   └── savings.md               # /savings command: token savings report
+│   ├── codex.md                 # /codex: explicit delegation with sandbox and model control
+│   └── savings.md               # /savings: lifetime token savings report
 ├── skills/
-│   └── delegate.md              # Skill: triggers delegation on failure escalation or explicit request
+│   └── delegate/SKILL.md        # Delegation skill: explicit @codex, second-opinion requests
 └── scripts/
-    ├── classify.sh              # Prompt classifier: outputs DELEGATE/CLAUDE/UNSURE with score
-    ├── codex-exec.sh            # Codex CLI wrapper: loads expert, builds prompt, runs exec
-    └── token-tracker.sh         # Savings logger: estimates and records per-task savings
+    ├── classify.sh              # Weighted pattern classifier (DELEGATE/CLAUDE/UNSURE)
+    ├── codex-exec.sh            # Codex CLI wrapper with expert persona injection
+    ├── token-tracker.sh         # Savings log writer (~/.claude/plugins/claude-codex/savings.log)
+    └── experts/                 # One system prompt per category (editable)
+        ├── analyst.md
+        ├── code-generator.md
+        ├── test-writer.md
+        ├── doc-writer.md
+        ├── refactor.md
+        └── format.md
 ```
 
 ---

@@ -167,6 +167,19 @@ if matches_pattern "$LOWER" "(add|annotate[[:space:]]+with|fill[[:space:]]+in)[[
   CATEGORY="${CATEGORY:-code-generator}"
 fi
 
+# Analyst / independent verification — explicit second-opinion or verify requests.
+# Only fires when the user explicitly wants an independent check, not on every question.
+if matches_pattern "$LOWER" \
+   "(second[[:space:]]+opinion|sanity[[:space:]]+check|independent(ly)?[[:space:]]+(verify|check|confirm)|double[[:space:]]+-?check|cross[[:space:]]+-?check)[[:space:]]+"; then
+  SCORE=$((SCORE + 25))
+  CATEGORY="${CATEGORY:-analyst}"
+fi
+if matches_pattern "$LOWER" \
+   "(verify|confirm|check)[[:space:]]+(that|whether|if)[[:space:]]+.*(correct|right|accurate|valid)"; then
+  SCORE=$((SCORE + 20))
+  CATEGORY="${CATEGORY:-analyst}"
+fi
+
 # Short-prompt bonus (simple requests tend to be short)
 if [[ $WORD_COUNT -lt 10 ]]; then
   SCORE=$((SCORE + 15))

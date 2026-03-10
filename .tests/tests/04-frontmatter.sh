@@ -5,7 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/helpers.sh"
 # Agents: must have name, description, model, tools
 assert_contains "$REPO_ROOT/agents/codex-agent.md" "name: codex-agent" "codex-agent has name"
 assert_contains "$REPO_ROOT/agents/codex-agent.md" "description:" "codex-agent has description"
-assert_contains "$REPO_ROOT/agents/codex-agent.md" "model: sonnet" "codex-agent has model: sonnet"
+assert_contains "$REPO_ROOT/agents/codex-agent.md" "model: inherit" "codex-agent has model: inherit"
 assert_contains "$REPO_ROOT/agents/codex-agent.md" "  - Bash" "codex-agent has YAML list tools"
 
 # Commands: must have name, description, argument-hint or allowed-tools

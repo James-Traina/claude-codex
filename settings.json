@@ -1,6 +1,7 @@
 {
   "_comment": "Routing thresholds and per-category model preferences for claude-codex.",
   "_comment_score": "classify.sh outputs a score. DELEGATE if >= delegate_threshold AND a category was matched. CLAUDE if <= claude_threshold.",
+  "_comment_patterns": "Routing signal patterns are hardcoded in scripts/classify.sh — edit them there. This file controls only thresholds, models, reasoning effort, budget scaling, and sandbox levels.",
 
   "thresholds": {
     "delegate_threshold": 20,
@@ -56,116 +57,5 @@
   "sandbox": {
     "auto_delegation": "read-only",
     "manual_delegation": "workspace-write"
-  },
-
-  "delegate_signals": {
-    "code_generation": {
-      "weight": 30,
-      "patterns": [
-        "(write|create|generate) (a |an |the )?(function|method|class|interface|type|enum|struct|dto|component|hook|service|controller|handler|middleware|route|endpoint|schema|migration|model)",
-        "(implement|add) (a |an |the )?(function|method|class|interface|type|route|endpoint|handler|hook)"
-      ]
-    },
-    "test_writing": {
-      "weight": 30,
-      "patterns": [
-        "(add|generate|write|create) (unit |integration |e2e )?tests? (for|to|covering)",
-        "write (a |some )?(unit|integration|e2e|snapshot) tests?"
-      ]
-    },
-    "documentation": {
-      "weight": 30,
-      "patterns": [
-        "(add|generate|write) (doc(string|s)?|jsdoc|tsdoc|typedoc|apidoc|comments?) (for|to)",
-        "document (this|the|all) (function|method|class|module|file|component)"
-      ]
-    },
-    "format_lint": {
-      "weight": 20,
-      "patterns": [
-        "(format|lint|fix style|prettify|auto.?fix|apply prettier|apply eslint)",
-        "fix (formatting|indentation|whitespace|trailing|imports)"
-      ]
-    },
-    "refactor": {
-      "weight": 20,
-      "patterns": [
-        "(rename|extract|inline|move) (the )?(function|method|variable|const(ant)?|class|interface|type|component)",
-        "refactor (this|the) (function|method|class|component|module) (to|into|for)"
-      ]
-    },
-    "boilerplate": {
-      "weight": 25,
-      "patterns": [
-        "(boilerplate|scaffold|skeleton|stub|placeholder|crud|getter|setter|accessor)",
-        "generate (a |the )?(crud|rest|graphql|grpc) (api|endpoint|service|resource)"
-      ]
-    },
-    "conversion": {
-      "weight": 20,
-      "patterns": [
-        "convert (this|the) .* (to|from|into) (javascript|typescript|python|go|rust|java|kotlin|swift|c\\+\\+|c#)",
-        "translate (this|the) (function|class|module|code) (to|into|from)"
-      ]
-    }
-  },
-
-  "claude_signals": {
-    "architecture": {
-      "weight": -40,
-      "patterns": [
-        "(architecture|architectural|design pattern|system design|design decision|design choice)",
-        "(how should (i|we) structure|what.?s the best (way|approach|pattern) to (structure|organize|design))"
-      ]
-    },
-    "security": {
-      "weight": -40,
-      "patterns": [
-        "(securit(y|ies)|vulnerabilit|exploit|pentest|injection|csrf|xss|sqli|ssrf|rce)",
-        "(auth(entication|orization|z)?|access control|permission|privilege|token (validation|verification))"
-      ]
-    },
-    "reasoning": {
-      "weight": -35,
-      "patterns": [
-        "\\bwhy\\b.*(doesn.?t|isn.?t|aren.?t|wasn.?t|weren.?t|can.?t|won.?t|fail|work|work)",
-        "^why (is|are|does|do|did|was|were|can|would|should)"
-      ]
-    },
-    "advisory": {
-      "weight": -30,
-      "patterns": [
-        "(should (i|we)|would you recommend|what.?s (the best|a good) (way|approach|practice))",
-        "(which (is|would be) better|pros and cons|trade.?offs?|recommend (using|against))"
-      ]
-    },
-    "debugging": {
-      "weight": -30,
-      "patterns": [
-        "(debug|not working|isn.?t working|broken|failing|threw (an? )?error|getting (an? )?error)",
-        "(stack trace|exception|panic|segfault|crash|hang|deadlock|race condition)"
-      ]
-    },
-    "performance": {
-      "weight": -25,
-      "patterns": [
-        "(performance|optimize|slow(er)?|bottleneck|memory (leak|usage|issue)|cpu (usage|spike))",
-        "(profile|benchmark|latency|throughput|scalab)"
-      ]
-    },
-    "review_analysis": {
-      "weight": -25,
-      "patterns": [
-        "(review|audit|analyze|assess|evaluate|critique) (my |this |the )?(code|implementation|approach|solution|pr|pull request)",
-        "(find (issues?|bugs?|problems?|flaws?) in|what.?s wrong with)"
-      ]
-    },
-    "explanation": {
-      "weight": -20,
-      "patterns": [
-        "(explain|help me understand|how does|what does|tell me (about|how))",
-        "(what is (the purpose|the difference|going on)|walk me through)"
-      ]
-    }
   }
 }
