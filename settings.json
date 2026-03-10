@@ -10,7 +10,7 @@
   },
 
   "models": {
-    "fast":    "gpt-5.3-codex-spark",
+    "fast":    "gpt-5.3-codex",
     "default": "gpt-5.3-codex",
     "capable": "gpt-5.2"
   },
