@@ -124,13 +124,14 @@ sudo apt-get install jq
 
 ### Install the Plugin
 
-```bash
-# Copy to Claude Code plugins directory
-cp -r claude-codex ~/.claude/plugins/claude-codex
+Inside Claude Code, run each command **separately**:
 
-# Make scripts executable
-chmod +x ~/.claude/plugins/claude-codex/hooks/*.sh
-chmod +x ~/.claude/plugins/claude-codex/scripts/*.sh
+```
+/plugin marketplace add James-Traina/science-plugins
+```
+
+```
+/plugin install claude-codex@science-plugins
 ```
 
 ### Verify Installation
